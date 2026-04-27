@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 

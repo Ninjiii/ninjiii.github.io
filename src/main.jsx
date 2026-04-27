@@ -430,6 +430,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
   const [log, setLog] = useState("");
   const [person, setPerson] = useState({ name: "", info: "" });
   const [evidence, setEvidence] = useState({ name: "", info: "", source: "", type: "Physical / Digital Evidence", status: "SECURED" });
+  const [evidenceImageFile, setEvidenceImageFile] = useState(null);
   const [appointment, setAppointment] = useState({ title: "", date: "" });
   const [uploading, setUploading] = useState(false);
   const [editCore, setEditCore] = useState(false);
@@ -534,14 +535,35 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
 
   async function addEvidence() {
     if (!mayEdit || !evidence.name.trim()) return;
+
+    const id = evidenceId();
+    let image = null;
+
+    if (evidenceImageFile) {
+      const imagePath = `case-files/${selected.id}/evidence/${id}-${Date.now()}-${evidenceImageFile.name}`;
+      const imageRef = ref(storage, imagePath);
+      await uploadBytes(imageRef, evidenceImageFile);
+      const imageUrl = await getDownloadURL(imageRef);
+      image = {
+        name: evidenceImageFile.name,
+        url: imageUrl,
+        path: imagePath,
+        type: evidenceImageFile.type,
+        uploadedAt: new Date().toISOString()
+      };
+    }
+
     const record = {
-      id: evidenceId(),
+      id,
       ...evidence,
+      image,
       addedAt: new Date().toISOString(),
       chain: [auditEntry("Evidence entered into chain of custody", currentUser)]
     };
+
     await patchCase({ evidence: [...(selected.evidence || []), record] }, `Evidence registered: ${evidence.name}`);
     setEvidence({ name: "", info: "", source: "", type: "Physical / Digital Evidence", status: "SECURED" });
+    setEvidenceImageFile(null);
   }
 
   async function addAppointment() {
@@ -810,6 +832,11 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
             <article key={i} className="record-card evidence-record">
               <b>{ev.id || "NO-EVIDENCE-ID"} · {ev.name}</b>
               <span>{ev.type} · {ev.status || "SECURED"} · Source: {ev.source || "Unknown"}</span>
+              {ev.image?.url && (
+                <a href={ev.image.url} target="_blank" className="evidence-image-link">
+                  <img src={ev.image.url} alt={ev.name} className="evidence-image-preview" />
+                </a>
+              )}
               <p>{ev.info}</p>
               <small>Chain: {(ev.chain || []).map(c => `${c.date} ${c.by}: ${c.text}`).join(" | ") || "No chain records"}</small>
             </article>
@@ -833,6 +860,11 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
               </select>
             </div>
             <input value={evidence.source} onChange={e => setEvidence({ ...evidence, source: e.target.value })} placeholder="Source / origin / location" />
+            <label className="evidence-image-upload">
+              Bild / Foto zum Beweis hinzufügen
+              <input type="file" accept="image/*" onChange={e => setEvidenceImageFile(e.target.files?.[0] || null)} />
+            </label>
+            {evidenceImageFile && <div className="selected-file">Ausgewählt: {evidenceImageFile.name}</div>}
             <textarea value={evidence.info} onChange={e => setEvidence({ ...evidence, info: e.target.value })} placeholder="Description / relevance / chain notes" />
             <button onClick={addEvidence}>Evidence registrieren</button>
           </section>}

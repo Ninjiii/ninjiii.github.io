@@ -1,16 +1,44 @@
 
 import jsPDF from "jspdf";
 
-export function exportCasePdf(caseFile) {
+async function imageToDataUrl(url) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.warn("Could not load evidence image for PDF:", error);
+    return null;
+  }
+}
+
+function imageFormatFromDataUrl(dataUrl) {
+  if (!dataUrl) return "JPEG";
+  if (dataUrl.startsWith("data:image/png")) return "PNG";
+  if (dataUrl.startsWith("data:image/webp")) return "WEBP";
+  return "JPEG";
+}
+
+export async function exportCasePdf(caseFile) {
   const doc = new jsPDF();
   const lineHeight = 8;
   let y = 16;
 
-  const addSection = (title) => {
-    if (y > 255) {
+  const ensureSpace = (needed = 20) => {
+    if (y + needed > 280) {
       doc.addPage();
       y = 16;
     }
+  };
+
+  const addSection = (title) => {
+    ensureSpace(20);
     y += 4;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
@@ -20,16 +48,13 @@ export function exportCasePdf(caseFile) {
   };
 
   const addLine = (label, value = "") => {
+    ensureSpace(14);
     doc.setFont("helvetica", "bold");
     doc.text(`${label}:`, 14, y);
     doc.setFont("helvetica", "normal");
     const text = doc.splitTextToSize(String(value || "-"), 128);
     doc.text(text, 58, y);
     y += Math.max(lineHeight, text.length * lineHeight);
-    if (y > 270) {
-      doc.addPage();
-      y = 16;
-    }
   };
 
   doc.setFontSize(18);
@@ -37,41 +62,85 @@ export function exportCasePdf(caseFile) {
   doc.text("FEDERAL INVESTIGATION BUREAU", 14, y);
   y += 8;
   doc.setFontSize(12);
-  doc.text("Aktenauszug / Ermittlungsakte", 14, y);
+  doc.text("Federal Case Jacket / Evidence Dossier", 14, y);
   y += 12;
 
   doc.setFontSize(10);
-  addLine("Aktennummer", caseFile.caseNo);
-  addLine("Titel", caseFile.title);
-  addLine("Aktenart", caseFile.type);
+  addLine("Case Number", caseFile.caseNo);
+  addLine("Title", caseFile.title);
+  addLine("Case Type", caseFile.type);
   addLine("Status", caseFile.status);
-  addLine("Priorität", caseFile.priority);
-  addLine("Einstufung", caseFile.classification);
+  addLine("Priority", caseFile.priority);
+  addLine("Classification", caseFile.classification);
   addLine("Lead Agent", caseFile.leadAgent || caseFile.assignee);
   addLine("Supervising Officer", caseFile.supervisor);
   addLine("Assigned Agents", (caseFile.assignedAgents || []).map(a => a.email).join(", "));
-  addLine("Ort", caseFile.location);
-  addLine("Abteilung", caseFile.department);
+  addLine("Location", caseFile.location);
+  addLine("Division", caseFile.department);
   addLine("Tags", (caseFile.tags || []).join(", "));
 
-  addSection("Sachverhalt");
-  addLine("Beschreibung", caseFile.description);
-  addLine("Ziel", caseFile.objective);
+  addSection("Incident Narrative");
+  addLine("Description", caseFile.description);
+  addLine("Objective", caseFile.objective);
 
-  addSection("Personen");
-  addLine("Einträge", (caseFile.suspects || []).map(p => `- ${p.name}: ${p.info}`).join("\n"));
+  addSection("Subjects / Persons of Interest");
+  addLine("Records", (caseFile.suspects || []).map(p => `- ${p.name}: ${p.info}`).join("\\n"));
 
-  addSection("Beweise");
-  addLine("Einträge", (caseFile.evidence || []).map(e => `- ${e.id || "NO-ID"} ${e.name} [${e.status || "SECURED"}]: ${e.info}`).join("\n"));
+  addSection("Evidence Registry");
+  const evidenceList = caseFile.evidence || [];
 
-  addSection("Notizen");
-  addLine("Einträge", (caseFile.notes || []).map(n => `- ${n.date} ${n.by || ""}: ${n.text}`).join("\n"));
+  if (!evidenceList.length) {
+    addLine("Records", "No evidence records.");
+  }
 
-  addSection("Einsatztagebuch");
-  addLine("Einträge", (caseFile.logbook || []).map(l => `- ${l.date} ${l.by || ""}: ${l.text}`).join("\n"));
+  for (const evidence of evidenceList) {
+    ensureSpace(30);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${evidence.id || "NO-ID"} · ${evidence.name || "Evidence"}`, 14, y);
+    y += 7;
 
-  addSection("Chronik");
-  addLine("Einträge", (caseFile.activity || []).map(a => `- ${a.date} ${a.by || ""}: ${a.text}`).join("\n"));
+    doc.setFont("helvetica", "normal");
+    const details = [
+      `Type: ${evidence.type || "-"}`,
+      `Status: ${evidence.status || "SECURED"}`,
+      `Source: ${evidence.source || "Unknown"}`,
+      `Info: ${evidence.info || "-"}`
+    ].join("\\n");
+    const detailLines = doc.splitTextToSize(details, 180);
+    ensureSpace(detailLines.length * lineHeight + 12);
+    doc.text(detailLines, 18, y);
+    y += detailLines.length * lineHeight;
 
-  doc.save(`${caseFile.caseNo || caseFile.title || "akte"}.pdf`);
+    if (evidence.image?.url) {
+      const dataUrl = await imageToDataUrl(evidence.image.url);
+
+      if (dataUrl) {
+        ensureSpace(84);
+        try {
+          doc.addImage(dataUrl, imageFormatFromDataUrl(dataUrl), 18, y, 72, 54);
+          y += 60;
+        } catch (error) {
+          console.warn("Could not add image to PDF:", error);
+          addLine("Image", evidence.image.name || "Image could not be embedded.");
+        }
+      } else {
+        addLine("Image", evidence.image.name || "Image could not be embedded.");
+      }
+    }
+
+    const chain = (evidence.chain || []).map(c => `- ${c.date} ${c.by}: ${c.text}`).join("\\n");
+    if (chain) addLine("Chain", chain);
+    y += 4;
+  }
+
+  addSection("Agent Notes");
+  addLine("Records", (caseFile.notes || []).map(n => `- ${n.date} ${n.by || ""}: ${n.text}`).join("\\n"));
+
+  addSection("Operations Log");
+  addLine("Records", (caseFile.logbook || []).map(l => `- ${l.date} ${l.by || ""}: ${l.text}`).join("\\n"));
+
+  addSection("Audit Trail");
+  addLine("Records", (caseFile.activity || []).map(a => `- ${a.date} ${a.by || ""}: ${a.text}`).join("\\n"));
+
+  doc.save(`${caseFile.caseNo || caseFile.title || "case-file"}.pdf`);
 }
