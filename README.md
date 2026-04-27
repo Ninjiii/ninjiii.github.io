@@ -129,3 +129,11 @@ Einbau:
 3. `firebase-firestore.rules` in Firestore-Regeln veröffentlichen.
 4. `firebase-storage.rules` in Storage-Regeln veröffentlichen.
 5. Website mit Strg+F5 neu laden.
+
+
+## V8 Großes Aktenfenster
+
+- Akten öffnen jetzt als großes zentriertes Fenster.
+- Die rechte Seitenleiste wurde entfernt.
+- Klick außerhalb des Fensters schließt die Akte.
+- Das Fenster nutzt fast die gesamte Bildschirmbreite und -höhe.
