@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -161,3 +161,14 @@ Einbau:
 - Administrator hat im Case-Fenster immer Bearbeitungsrechte.
 - Update-Fehler werden sichtbar in der Akte angezeigt.
 - Speichern schließt den Editor nur noch, wenn Firestore das Update wirklich angenommen hat.
+
+
+## V11 Realistic Federal UI
+
+- deutlich realistischere Federal-Case-Management-Optik
+- kantiger, kompakter, weniger Web-App/Kachel-Look
+- Classified Case Jacket Banner
+- Federal Dossier Header im Aktenfenster
+- Command-Center-Stil mit Scanline/Grid-Effekt
+- Tabellen und Module wie interne Behördenakten
+- Labels mehr Richtung Case Records / Evidence Registry / Operations Log

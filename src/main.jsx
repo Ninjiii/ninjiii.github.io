@@ -171,7 +171,7 @@ function LoginScreen() {
       <section className="login-card">
         <div className="seal">FIB</div>
         <h1>Federal Investigation Bureau</h1>
-        <p>Gesichertes Akten-, Ermittlungs- und Einsatzsystem</p>
+        <p>Restricted Federal Case Records Division Network</p>
 
         <form onSubmit={submit}>
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="E-Mail" type="email" required />
@@ -188,12 +188,12 @@ function LoginScreen() {
 
 function Sidebar({ profile, active, setActive }) {
   const nav = [
-    ["dashboard", "Command Center", LayoutDashboard],
-    ["akten", "Case Management", FolderKanban],
+    ["dashboard", "Federal Command Center", LayoutDashboard],
+    ["akten", "Case Records Division", FolderKanban],
     ["termine", "Termine", CalendarDays],
-    ["dokumente", "Dokumente", FileText],
-    ["personal", "Personal", Users],
-    ["admin", "Administration", Shield]
+    ["dokumente", "Document Vault", FileText],
+    ["personal", "Personnel Registry", Users],
+    ["admin", "Command Admin", Shield]
   ];
 
   return (
@@ -240,7 +240,7 @@ function DashboardHome({ cases }) {
   return (
     <section className="home-grid">
       <div className="hero-panel">
-        <span className="eyebrow">Command Center</span>
+        <span className="eyebrow">Federal Command Center</span>
         <h2>Operative Übersicht</h2>
         <p>Live-Ansicht über aktive Akten, kritische Ermittlungen, Observationslagen und letzte Einträge.</p>
         <div className="hero-metrics">
@@ -319,7 +319,7 @@ function CaseForm({ user, users, onCreate }) {
     <form className="case-form expanded" onSubmit={submit}>
       <div>
         <span className="eyebrow">Neue Case Jacket</span>
-        <h2>Case Intake</h2>
+        <h2>Case Intake Report</h2>
       </div>
 
       <div className="grid-3">
@@ -337,8 +337,8 @@ function CaseForm({ user, users, onCreate }) {
         <input value={form.tagsInput} onChange={e => set("tagsInput", e.target.value)} placeholder="Tags, kommasepariert" />
       </div>
 
-      <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder="Sachverhalt / Hintergrund" />
-      <textarea value={form.objective} onChange={e => set("objective", e.target.value)} placeholder="Ermittlungsziel / Maßnahmenziel" />
+      <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder="Incident Narrative / Hintergrund" />
+      <textarea value={form.objective} onChange={e => set("objective", e.target.value)} placeholder="Investigative Objective / Maßnahmenziel" />
 
       <div className="grid-2">
         <div className="mini-section">
@@ -355,7 +355,7 @@ function CaseForm({ user, users, onCreate }) {
 
       <div className="grid-2">
         <textarea value={form.noteInput} onChange={e => set("noteInput", e.target.value)} placeholder="Erste Notiz" />
-        <textarea value={form.logbookInput} onChange={e => set("logbookInput", e.target.value)} placeholder="Einsatztagebuch-Eintrag" />
+        <textarea value={form.logbookInput} onChange={e => set("logbookInput", e.target.value)} placeholder="Operations Log-Eintrag" />
       </div>
 
       <div className="grid-2">
@@ -363,7 +363,7 @@ function CaseForm({ user, users, onCreate }) {
         <input value={form.appointmentDate} onChange={e => set("appointmentDate", e.target.value)} type="datetime-local" />
       </div>
 
-      <button><Plus size={18} /> Case Jacket speichern</button>
+      <button><Plus size={18} /> Case File speichern</button>
     </form>
   );
 }
@@ -523,11 +523,11 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
   const tabs = [
     ["overview", "Übersicht"],
     ["persons", "Personen"],
-    ["evidence", "Beweise"],
-    ["documents", "Dokumente"],
-    ["notes", "Notizen"],
+    ["evidence", "Evidence Registry"],
+    ["documents", "Document Vault"],
+    ["notes", "Agent Notes"],
     ["logbook", "ETB"],
-    ["timeline", "Chronik"]
+    ["timeline", "Audit Trail"]
   ];
 
   return (
@@ -551,7 +551,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
         {mayDelete && <button className="danger" onClick={removeCase}>Löschen</button>}
         {mayAssign && (
           <select value={selected.assigneeUid || ""} onChange={e => assignTo(e.target.value)}>
-            <option value="">Zuweisen...</option>
+            <option value="">Assign Case...</option>
             {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email} — {u.role}</option>)}
           </select>
         )}
@@ -567,10 +567,10 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
         <div className="detail-grid">
           <section className="module-card span-2">
             <div className="module-heading-row">
-              <h3>Case Summary / Stammdaten</h3>
+              <h3>Case Summary / Primary Record</h3>
               {mayEdit ? (
                 <button className="ghost" onClick={() => setEditCore(!editCore)}>
-                  {editCore ? "Bearbeitung schließen" : "Stammdaten bearbeiten"}
+                  {editCore ? "Bearbeitung schließen" : "Primary Record bearbeiten"}
                 </button>
               ) : (
                 <span className="permission-warning">Keine Bearbeitungsrechte erkannt</span>
@@ -588,10 +588,10 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
                   <div><b>Ort</b><span>{selected.location || "-"}</span></div>
                 </div>
 
-                <h3>Sachverhalt</h3>
+                <h3>Incident Narrative</h3>
                 <p>{selected.description || "Keine Beschreibung."}</p>
-                <h3>Ermittlungsziel</h3>
-                <p>{selected.objective || "Kein Ermittlungsziel hinterlegt."}</p>
+                <h3>Investigative Objective</h3>
+                <p>{selected.objective || "Kein Investigative Objective hinterlegt."}</p>
               </>
             )}
 
@@ -616,8 +616,8 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
                   <input value={coreDraft.tagsInput} onChange={e => setCoreField("tagsInput", e.target.value)} placeholder="Tags, kommasepariert" />
                 </div>
 
-                <textarea value={coreDraft.description} onChange={e => setCoreField("description", e.target.value)} placeholder="Sachverhalt / Hintergrund" />
-                <textarea value={coreDraft.objective} onChange={e => setCoreField("objective", e.target.value)} placeholder="Ermittlungsziel / Maßnahmenziel" />
+                <textarea value={coreDraft.description} onChange={e => setCoreField("description", e.target.value)} placeholder="Incident Narrative / Hintergrund" />
+                <textarea value={coreDraft.objective} onChange={e => setCoreField("objective", e.target.value)} placeholder="Investigative Objective / Maßnahmenziel" />
 
                 <div className="editor-actions">
                   <button onClick={saveCoreFields}>Änderungen speichern</button>
@@ -628,7 +628,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
           </section>
 
           <section className="module-card">
-            <h3>Schnellstatus</h3>
+            <h3>Case Control</h3>
             {mayEdit ? (
               <>
                 <label>Status</label>
@@ -660,7 +660,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
 
       {tab === "persons" && (
         <div className="detail-grid">
-          <ModuleList title="Beteiligte / Zielpersonen" items={selected.suspects || []} empty="Keine Personen hinterlegt." render={(p, i) => (
+          <ModuleList title="Subjects / Persons of Interest" items={selected.suspects || []} empty="Keine Personen hinterlegt." render={(p, i) => (
             <article key={i} className="record-card"><b>{p.name}</b><span>{p.status}</span><p>{p.info}</p></article>
           )} />
           {mayEdit && <section className="module-card">
@@ -674,7 +674,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
 
       {tab === "evidence" && (
         <div className="detail-grid">
-          <ModuleList title="Beweise" items={selected.evidence || []} empty="Keine Beweise hinterlegt." render={(ev, i) => (
+          <ModuleList title="Evidence Registry" items={selected.evidence || []} empty="Keine Evidence Registry hinterlegt." render={(ev, i) => (
             <article key={i} className="record-card"><b>{ev.name}</b><span>{ev.type}</span><p>{ev.info}</p></article>
           )} />
           {mayEdit && <section className="module-card">
@@ -687,7 +687,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
       )}
 
       {tab === "documents" && (
-        <ModuleList title="Dokumente" items={selected.documents || []} empty="Keine Dokumente hochgeladen." render={(d, i) => (
+        <ModuleList title="Document Vault" items={selected.documents || []} empty="Keine Document Vault hochgeladen." render={(d, i) => (
           <a key={i} href={d.url} target="_blank" className="doc-link">{d.name}</a>
         )} />
       )}
@@ -701,7 +701,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
 
       {tab === "notes" && (
         <div className="detail-grid">
-          <ModuleList title="Notizen" items={selected.notes || []} empty="Keine Notizen." render={(n, i) => (
+          <ModuleList title="Agent Notes" items={selected.notes || []} empty="Keine Agent Notes." render={(n, i) => (
             <article key={i} className="record-card"><b>{n.date}</b><span>{n.by}</span><p>{n.text}</p></article>
           )} />
           {mayEdit && <section className="module-card">
@@ -714,7 +714,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
 
       {tab === "logbook" && (
         <div className="detail-grid">
-          <ModuleList title="Einsatztagebuch" items={selected.logbook || []} empty="Keine ETB-Einträge." render={(l, i) => (
+          <ModuleList title="Operations Log" items={selected.logbook || []} empty="Keine ETB-Einträge." render={(l, i) => (
             <article key={i} className="record-card"><b>{l.date}</b><span>{l.by}</span><p>{l.text}</p></article>
           )} />
           {mayEdit && <section className="module-card">
@@ -732,7 +732,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
       )}
 
       {tab === "timeline" && (
-        <ModuleList title="Chronik" items={selected.activity || []} empty="Keine Aktivität." render={(a, i) => (
+        <ModuleList title="Audit Trail" items={selected.activity || []} empty="Keine Aktivität." render={(a, i) => (
           <article key={i} className="timeline-item"><b>{a.date}</b><span>{a.by}</span><p>{a.text}</p></article>
         )} />
       )}
@@ -852,8 +852,8 @@ function AdminPanel({ currentUser, profile, ranks }) {
     <section className="admin-panel">
       <div className="admin-head">
         <div>
-          <span className="eyebrow">Administration</span>
-          <h2>Personal, Zugänge & Ränge</h2>
+          <span className="eyebrow">Command Admin</span>
+          <h2>Personnel Registry, Zugänge & Ränge</h2>
           <p>Zugänge, Anzeigenamen, Sperren und Rechteverwaltung.</p>
         </div>
         <div className="admin-count">{users.length} Nutzer</div>
@@ -982,7 +982,7 @@ function Dashboard({ user, profile }) {
         <header className="topbar">
           <div>
             <span className="eyebrow">Sicherheitsstufe: {profile.role}</span>
-            <h1>{active === "dashboard" ? "Command Center" : active === "akten" ? "Case Management" : active}</h1>
+            <h1>{active === "dashboard" ? "Federal Command Center" : active === "akten" ? "Case Records Division" : active}</h1>
           </div>
           <div className="user-pill">{profile.displayName || user.email}</div>
         </header>
