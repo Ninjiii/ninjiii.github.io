@@ -53,6 +53,54 @@ const CLASSIFICATIONS = ["UNCLASSIFIED", "CONFIDENTIAL", "SECRET", "TOP SECRET"]
 const PERSON_STATUSES = ["SUSPECT", "WITNESS", "VICTIM", "INFORMANT", "POI", "UNKNOWN"];
 const RISK_LEVELS = ["LOW", "STANDARD", "ELEVATED", "HIGH", "CRITICAL"];
 
+const SIMPLE_TRANSLATIONS = {
+  overview: "Übersicht",
+  intelligence: "Intelligence",
+  investigation: "Ermittlungsverlauf",
+  assignments: "Zuständigkeiten",
+  linkedCases: "Verknüpfte Akten",
+  subjects: "Zielpersonen",
+  evidence: "Beweismittel",
+  documentVault: "Dokumentenarchiv",
+  agentNotes: "Ermittlernotizen",
+  operationsLog: "Einsatztagebuch",
+  auditTrail: "Protokoll",
+  intelligenceNetwork: "Intelligence-Netzwerk",
+  linkedPersons: "Verknüpfte Personen",
+  noRecords: "Keine Einträge vorhanden.",
+  connectedCases: "Verbundene Akten",
+  linkPerson: "Person verknüpfen",
+  createPerson: "Person erstellen",
+  personName: "Name",
+  alias: "Alias"
+};
+
+const VALUE_LABELS_SIMPLE = {
+  SUSPECT: "VERDÄCHTIGER",
+  WITNESS: "ZEUGE",
+  VICTIM: "GESCHÄDIGTER",
+  INFORMANT: "INFORMANT",
+  POI: "PERSON VON INTERESSE",
+  UNKNOWN: "UNBEKANNT",
+  LOW: "NIEDRIG",
+  STANDARD: "STANDARD",
+  ELEVATED: "ERHÖHT",
+  HIGH: "HOCH",
+  CRITICAL: "KRITISCH",
+  OPEN: "OFFEN",
+  ACTIVE: "AKTIV",
+  "UNDER SURVEILLANCE": "UNTER BEOBACHTUNG",
+  "WARRANT ISSUED": "HAFTBEFEHL ERLASSEN",
+  SUSPENDED: "AUSGESETZT",
+  CLOSED: "ABGESCHLOSSEN",
+  ARCHIVED: "ARCHIVIERT"
+};
+
+function labelValue(value, lang = "de") {
+  return lang === "de" ? (VALUE_LABELS_SIMPLE[value] || value || "-") : (value || "-");
+}
+
+
 
 function caseNumber(type) {
   const prefix = {
@@ -427,7 +475,8 @@ function ModuleList({ title, items, empty, render }) {
   );
 }
 
-function CaseDetails({ selected, profile, ranks, users, onClose }) {
+function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t: translate, lang = 'de' }) {
+  const t = translate || ((key) => SIMPLE_TRANSLATIONS[key] || key);
   const [tab, setTab] = useState("overview");
   const [note, setNote] = useState("");
   const [log, setLog] = useState("");
@@ -472,8 +521,6 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
     });
     setEditCore(false);
   }, [selected?.id]);
-
-  persons = persons || [];
 
   if (!selected) return null;
 
@@ -1537,7 +1584,7 @@ function Dashboard({ user, profile }) {
       {selected && (
         <div className="case-modal-backdrop">
           <div className="case-modal-window">
-            <CaseDetails selected={selected} profile={profile} ranks={ranks} users={users} onClose={() => setSelectedId(null)} />
+            <CaseDetails selected={selected} profile={profile} ranks={ranks} users={users} persons={persons} onClose={() => setSelectedId(null)} />
           </div>
         </div>
       )}
