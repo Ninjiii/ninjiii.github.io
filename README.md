@@ -2,7 +2,7 @@
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
-## Funktionen V1
+## Funktionen V2
 
 - Login / Registrierung per E-Mail und Passwort
 - Rollen-Grundsystem: Administrator, Direktor, Leitung, Ermittler, Agent, Anwärter
