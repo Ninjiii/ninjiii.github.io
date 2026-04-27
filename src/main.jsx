@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { initializeApp, deleteApp } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
+  getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut
@@ -32,8 +34,8 @@ import {
   Upload,
   Users
 } from "lucide-react";
-import { auth, db, storage } from "./firebase/firebase";
-import { ROLES, can } from "./lib/roles";
+import { app, auth, db, firebaseConfig, storage } from "./firebase/firebase";
+import { ALL_PERMISSIONS, DEFAULT_ROLE_PERMISSIONS, normalizeRankList, can } from "./lib/roles";
 import { exportCasePdf } from "./lib/pdf";
 import "./styles/app.css";
 
@@ -97,7 +99,6 @@ function useAuthProfile() {
 }
 
 function LoginScreen() {
-  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -107,13 +108,9 @@ function LoginScreen() {
     setError("");
 
     try {
-      if (mode === "register") {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
-      setError(err.message);
+      setError("Login fehlgeschlagen. Bitte Zugangsdaten prüfen oder Administrator kontaktieren.");
     }
   }
 
@@ -128,12 +125,10 @@ function LoginScreen() {
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="E-Mail" type="email" required />
           <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Passwort" type="password" required />
           {error && <div className="error">{error}</div>}
-          <button>{mode === "login" ? "Einloggen" : "Account erstellen"}</button>
+          <button>Einloggen</button>
         </form>
 
-        <button className="ghost" onClick={() => setMode(mode === "login" ? "register" : "login")}>
-          {mode === "login" ? "Neuen Zugang erstellen" : "Zurück zum Login"}
-        </button>
+        <p className="login-hint">Zugänge werden ausschließlich durch berechtigte Führungskräfte erstellt.</p>
       </section>
     </main>
   );
@@ -227,7 +222,7 @@ function CaseForm({ user, onCreate }) {
   );
 }
 
-function CaseDetails({ selected, profile, onClose }) {
+function CaseDetails({ selected, profile, ranks, onClose }) {
   const [note, setNote] = useState("");
   const [log, setLog] = useState("");
   const [appointmentTitle, setAppointmentTitle] = useState("");
@@ -303,8 +298,8 @@ function CaseDetails({ selected, profile, onClose }) {
       <p>{selected.description}</p>
 
       <div className="actions">
-        {can(profile.role, "export") && <button onClick={() => exportCasePdf(selected)}>PDF herunterladen</button>}
-        {can(profile.role, "delete") && <button className="danger" onClick={removeCase}>Löschen</button>}
+        {can(profile.role, "export", ranks) && <button onClick={() => exportCasePdf(selected)}>PDF herunterladen</button>}
+        {can(profile.role, "delete", ranks) && <button className="danger" onClick={removeCase}>Löschen</button>}
       </div>
 
       <div className="panel">
@@ -344,17 +339,49 @@ function CaseDetails({ selected, profile, onClose }) {
 }
 
 
-function AdminPanel({ currentUser, profile }) {
-  const [users, setUsers] = useState([]);
-  const [status, setStatus] = useState("");
+
+function useRanks() {
+  const [ranks, setRanks] = useState(normalizeRankList());
 
   useEffect(() => {
-    if (!can(profile.role, "manageUsers")) return;
+    const refDoc = doc(db, "settings", "ranks");
+    return onSnapshot(refDoc, snap => {
+      if (snap.exists()) {
+        setRanks(normalizeRankList(snap.data().items));
+      } else {
+        setRanks(normalizeRankList());
+      }
+    });
+  }, []);
+
+  return ranks;
+}
+
+function AdminPanel({ currentUser, profile, ranks }) {
+  const [users, setUsers] = useState([]);
+  const [status, setStatus] = useState("");
+  const [newUser, setNewUser] = useState({
+    email: "",
+    password: "",
+    displayName: "",
+    role: ranks[0]?.name || "Anwärter"
+  });
+  const [rankName, setRankName] = useState("");
+  const [rankPermissions, setRankPermissions] = useState(["read"]);
+
+  useEffect(() => {
+    if (!can(profile.role, "manageUsers", ranks) && !can(profile.role, "createUsers", ranks)) return;
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
     return onSnapshot(q, snap => {
       setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-  }, [profile.role]);
+  }, [profile.role, ranks]);
+
+  useEffect(() => {
+    if (!ranks.find(rank => rank.name === newUser.role)) {
+      setNewUser(current => ({ ...current, role: ranks[0]?.name || "Anwärter" }));
+    }
+  }, [ranks, newUser.role]);
 
   async function updateRole(userId, role) {
     setStatus("");
@@ -364,6 +391,19 @@ function AdminPanel({ currentUser, profile }) {
         updatedAt: serverTimestamp()
       });
       setStatus("Rolle wurde aktualisiert.");
+    } catch (error) {
+      setStatus(`Fehler: ${error.message}`);
+    }
+  }
+
+  async function updateDisplayName(userId, displayName) {
+    setStatus("");
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        displayName,
+        updatedAt: serverTimestamp()
+      });
+      setStatus("Name wurde aktualisiert.");
     } catch (error) {
       setStatus(`Fehler: ${error.message}`);
     }
@@ -387,7 +427,117 @@ function AdminPanel({ currentUser, profile }) {
     }
   }
 
-  if (!can(profile.role, "manageUsers")) {
+  async function createManagedAccount(event) {
+    event.preventDefault();
+
+    if (!can(profile.role, "createUsers", ranks)) {
+      setStatus("Du hast keine Berechtigung, Accounts anzulegen.");
+      return;
+    }
+
+    setStatus("");
+
+    const secondaryApp = initializeApp(firebaseConfig, `account-create-${Date.now()}`);
+    const secondaryAuth = getAuth(secondaryApp);
+
+    try {
+      const credential = await createUserWithEmailAndPassword(
+        secondaryAuth,
+        newUser.email,
+        newUser.password
+      );
+
+      await setDoc(doc(db, "users", credential.user.uid), {
+        uid: credential.user.uid,
+        email: newUser.email,
+        displayName: newUser.displayName || newUser.email.split("@")[0],
+        role: newUser.role,
+        suspended: false,
+        createdBy: currentUser.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      await signOut(secondaryAuth);
+      await deleteApp(secondaryApp);
+
+      setNewUser({
+        email: "",
+        password: "",
+        displayName: "",
+        role: ranks[0]?.name || "Anwärter"
+      });
+      setStatus("Account wurde erstellt.");
+    } catch (error) {
+      await deleteApp(secondaryApp);
+      setStatus(`Fehler: ${error.message}`);
+    }
+  }
+
+  async function saveRanks(nextRanks) {
+    await setDoc(doc(db, "settings", "ranks"), {
+      items: normalizeRankList(nextRanks),
+      updatedAt: serverTimestamp(),
+      updatedBy: currentUser.uid
+    });
+  }
+
+  async function addRank(event) {
+    event.preventDefault();
+
+    if (!can(profile.role, "manageRanks", ranks)) {
+      setStatus("Du hast keine Berechtigung, Ränge zu verwalten.");
+      return;
+    }
+
+    const cleanName = rankName.trim();
+    if (!cleanName) return;
+
+    if (ranks.some(rank => rank.name.toLowerCase() === cleanName.toLowerCase())) {
+      setStatus("Diesen Rang gibt es bereits.");
+      return;
+    }
+
+    await saveRanks([...ranks, { name: cleanName, permissions: rankPermissions }]);
+    setRankName("");
+    setRankPermissions(["read"]);
+    setStatus("Rang wurde erstellt.");
+  }
+
+  async function updateRankPermissions(rankName, permission, checked) {
+    const nextRanks = ranks.map(rank => {
+      if (rank.name !== rankName) return rank;
+      const permissions = checked
+        ? Array.from(new Set([...(rank.permissions || []), permission]))
+        : (rank.permissions || []).filter(item => item !== permission);
+
+      return { ...rank, permissions: permissions.length ? permissions : ["read"] };
+    });
+
+    await saveRanks(nextRanks);
+    setStatus("Rangrechte wurden aktualisiert.");
+  }
+
+  async function deleteRank(rankName) {
+    if (["Administrator"].includes(rankName)) {
+      setStatus("Der Administrator-Rang kann nicht gelöscht werden.");
+      return;
+    }
+
+    if (users.some(user => user.role === rankName)) {
+      setStatus("Dieser Rang ist noch Benutzern zugewiesen und kann nicht gelöscht werden.");
+      return;
+    }
+
+    await saveRanks(ranks.filter(rank => rank.name !== rankName));
+    setStatus("Rang wurde gelöscht.");
+  }
+
+  const mayManageUsers = can(profile.role, "manageUsers", ranks);
+  const mayCreateUsers = can(profile.role, "createUsers", ranks);
+  const mayManageRanks = can(profile.role, "manageRanks", ranks);
+
+  if (!mayManageUsers && !mayCreateUsers && !mayManageRanks) {
     return (
       <section className="placeholder">
         <h2>Administration</h2>
@@ -401,56 +551,143 @@ function AdminPanel({ currentUser, profile }) {
       <div className="admin-head">
         <div>
           <span className="eyebrow">Administrator-Konsole</span>
-          <h2>Benutzer & Rollen</h2>
-          <p>Verwalte Ränge, Rechte und gesperrte Accounts.</p>
+          <h2>Benutzer, Logins & Ränge</h2>
+          <p>Lege Accounts, Anzeigenamen und eigene Ranglisten fest.</p>
         </div>
         <div className="admin-count">{users.length} Nutzer</div>
       </div>
 
       {status && <div className="notice">{status}</div>}
 
-      <div className="admin-table">
-        <div className="admin-row admin-row-head">
-          <span>Nutzer</span>
-          <span>Rang</span>
-          <span>Status</span>
-          <span>Aktion</span>
-        </div>
-
-        {users.map(user => (
-          <div className="admin-row" key={user.id}>
-            <div>
-              <strong>{user.displayName || "Unbekannt"}</strong>
-              <small>{user.email}</small>
-            </div>
-
+      {mayCreateUsers && (
+        <form className="admin-create" onSubmit={createManagedAccount}>
+          <h3>Account anlegen</h3>
+          <div className="grid-2">
+            <input
+              value={newUser.email}
+              onChange={e => setNewUser(current => ({ ...current, email: e.target.value }))}
+              placeholder="Login E-Mail"
+              type="email"
+              required
+            />
+            <input
+              value={newUser.password}
+              onChange={e => setNewUser(current => ({ ...current, password: e.target.value }))}
+              placeholder="Startpasswort"
+              type="password"
+              minLength={6}
+              required
+            />
+            <input
+              value={newUser.displayName}
+              onChange={e => setNewUser(current => ({ ...current, displayName: e.target.value }))}
+              placeholder="Anzeigename, z.B. FIB-10 | Fox"
+              required
+            />
             <select
-              value={user.role || "Anwärter"}
-              onChange={e => updateRole(user.id, e.target.value)}
-              disabled={user.uid === currentUser.uid}
+              value={newUser.role}
+              onChange={e => setNewUser(current => ({ ...current, role: e.target.value }))}
             >
-              {ROLES.map(role => <option key={role}>{role}</option>)}
+              {ranks.map(rank => <option key={rank.name}>{rank.name}</option>)}
             </select>
-
-            <span className={user.suspended ? "status-bad" : "status-good"}>
-              {user.suspended ? "Gesperrt" : "Aktiv"}
-            </span>
-
-            <button
-              className={user.suspended ? "ghost" : "danger"}
-              onClick={() => toggleSuspended(user)}
-              disabled={user.uid === currentUser.uid}
-            >
-              {user.suspended ? "Entsperren" : "Sperren"}
-            </button>
           </div>
-        ))}
-      </div>
+          <button>Account erstellen</button>
+        </form>
+      )}
+
+      {mayManageUsers && (
+        <div className="admin-table">
+          <div className="admin-row admin-row-head">
+            <span>Nutzer</span>
+            <span>Name</span>
+            <span>Rang</span>
+            <span>Status</span>
+            <span>Aktion</span>
+          </div>
+
+          {users.map(user => (
+            <div className="admin-row admin-row-wide" key={user.id}>
+              <div>
+                <strong>{user.displayName || "Unbekannt"}</strong>
+                <small>{user.email}</small>
+              </div>
+
+              <input
+                defaultValue={user.displayName || ""}
+                placeholder="z.B. FIB-10 | Fox"
+                onBlur={e => updateDisplayName(user.id, e.target.value)}
+              />
+
+              <select
+                value={user.role || "Anwärter"}
+                onChange={e => updateRole(user.id, e.target.value)}
+                disabled={user.uid === currentUser.uid}
+              >
+                {ranks.map(rank => <option key={rank.name}>{rank.name}</option>)}
+              </select>
+
+              <span className={user.suspended ? "status-bad" : "status-good"}>
+                {user.suspended ? "Gesperrt" : "Aktiv"}
+              </span>
+
+              <button
+                className={user.suspended ? "ghost" : "danger"}
+                onClick={() => toggleSuspended(user)}
+                disabled={user.uid === currentUser.uid}
+              >
+                {user.suspended ? "Entsperren" : "Sperren"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {mayManageRanks && (
+        <div className="rank-manager">
+          <h3>Eigene Rangliste</h3>
+          <form className="rank-create" onSubmit={addRank}>
+            <input
+              value={rankName}
+              onChange={e => setRankName(e.target.value)}
+              placeholder="Neuer Rang, z.B. Deputy Director"
+            />
+            <button>Rang hinzufügen</button>
+          </form>
+
+          <div className="rank-list">
+            {ranks.map(rank => (
+              <article key={rank.name} className="rank-card">
+                <header>
+                  <strong>{rank.name}</strong>
+                  {rank.name !== "Administrator" && (
+                    <button className="ghost" onClick={() => deleteRank(rank.name)}>Löschen</button>
+                  )}
+                </header>
+
+                <div className="permission-grid">
+                  {ALL_PERMISSIONS.map(permission => (
+                    <label key={permission.id}>
+                      <input
+                        type="checkbox"
+                        checked={(rank.permissions || []).includes(permission.id)}
+                        disabled={rank.name === "Administrator"}
+                        onChange={e => updateRankPermissions(rank.name, permission.id, e.target.checked)}
+                      />
+                      {permission.label}
+                    </label>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
 
 function Dashboard({ user, profile }) {
+  const ranks = useRanks();
   const [active, setActive] = useState("akten");
   const [cases, setCases] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -500,7 +737,7 @@ function Dashboard({ user, profile }) {
 
             <section className="toolbar">
               <div className="search"><Search size={18} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Akten durchsuchen..." /></div>
-              {can(profile.role, "create") && <button onClick={() => setShowForm(!showForm)}><Plus size={18} /> Neue Akte</button>}
+              {can(profile.role, "create", ranks) && <button onClick={() => setShowForm(!showForm)}><Plus size={18} /> Neue Akte</button>}
             </section>
 
             {showForm && <CaseForm user={user} onCreate={() => setShowForm(false)} />}
@@ -522,7 +759,7 @@ function Dashboard({ user, profile }) {
           </>
         )}
 
-        {active === "admin" && <AdminPanel currentUser={user} profile={profile} />}
+        {active === "admin" && <AdminPanel currentUser={user} profile={profile} ranks={ranks} />}
 
         {active !== "akten" && active !== "admin" && (
           <section className="placeholder">
@@ -532,7 +769,7 @@ function Dashboard({ user, profile }) {
         )}
       </main>
 
-      <CaseDetails selected={selected} profile={profile} onClose={() => setSelectedId(null)} />
+      <CaseDetails selected={selected} profile={profile} ranks={ranks} onClose={() => setSelectedId(null)} />
     </div>
   );
 }
