@@ -1459,6 +1459,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 function AdminPanel({ currentUser, profile, ranks }) {
   const [users, setUsers] = useState([]);
   const [persons, setPersons] = useState([]);
+  const [selectedPersonId, setSelectedPersonId] = useState(null);
   const [status, setStatus] = useState("");
   const [newUser, setNewUser] = useState({ email: "", password: "", displayName: "", role: ranks[0]?.name || "Anwärter" });
   const [rankName, setRankName] = useState("");
@@ -1646,6 +1647,185 @@ function AdminPanel({ currentUser, profile, ranks }) {
   );
 }
 
+
+function PersonProfilePanel({ person, cases, profile, ranks, onClose, t, lang }) {
+  const [draft, setDraft] = useState(null);
+  const [mugshotFile, setMugshotFile] = useState(null);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    if (!person) return;
+    setDraft({
+      name: person.name || "",
+      alias: person.alias || "",
+      status: person.status || "SUSPECT",
+      riskLevel: person.riskLevel || "STANDARD",
+      notes: person.notes || "",
+      flags: {
+        armed: Boolean(person.flags?.armed),
+        dangerous: Boolean(person.flags?.dangerous),
+        underSurveillance: Boolean(person.flags?.underSurveillance),
+        knownAssociate: Boolean(person.flags?.knownAssociate)
+      }
+    });
+    setMugshotFile(null);
+    setStatus("");
+  }, [person?.id]);
+
+  if (!person || !draft) return null;
+
+  const mayEdit = profile.role === "Administrator" || can(profile.role, "edit", ranks);
+  const linkedCases = cases.filter(caseFile =>
+    (person.caseRefs || []).includes(caseFile.id) ||
+    (person.caseNumbers || []).includes(caseFile.caseNo) ||
+    (caseFile.personRefs || []).some(ref => ref.id === person.id)
+  );
+
+  function setField(key, value) {
+    setDraft(current => ({ ...current, [key]: value }));
+  }
+
+  function setFlag(key, value) {
+    setDraft(current => ({ ...current, flags: { ...current.flags, [key]: value } }));
+  }
+
+  async function saveProfile() {
+    if (!mayEdit) return;
+    setStatus("");
+
+    let mugshot = person.mugshot || null;
+
+    if (mugshotFile) {
+      const path = `persons/${person.id}/mugshot-${Date.now()}-${mugshotFile.name}`;
+      const fileRef = ref(storage, path);
+      await uploadBytes(fileRef, mugshotFile);
+      const url = await getDownloadURL(fileRef);
+      mugshot = {
+        name: mugshotFile.name,
+        url,
+        path,
+        type: mugshotFile.type,
+        uploadedAt: new Date().toISOString()
+      };
+    }
+
+    await updateDoc(doc(db, "persons", person.id), {
+      ...draft,
+      mugshot,
+      updatedAt: serverTimestamp()
+    });
+
+    setStatus(lang === "de" ? "Profil gespeichert." : "Profile saved.");
+    setMugshotFile(null);
+  }
+
+  const activeFlags = Object.entries(draft.flags || {}).filter(([, value]) => value);
+
+  return (
+    <div className="person-modal-backdrop">
+      <section className="person-profile-panel">
+        <header>
+          <div>
+            <span className="eyebrow">{t("personProfile") || "Personenprofil"}</span>
+            <h2>{person.name}</h2>
+          </div>
+          <button className="ghost" onClick={onClose}>{t("close") || "Schließen"}</button>
+        </header>
+
+        {status && <div className="notice">{status}</div>}
+
+        <div className="person-profile-grid">
+          <aside className="person-identity-card">
+            <div className="mugshot-frame">
+              {person.mugshot?.url ? (
+                <img src={person.mugshot.url} alt={person.name} />
+              ) : (
+                <div className="mugshot-placeholder">NO IMAGE</div>
+              )}
+            </div>
+
+            {mayEdit && (
+              <label className="mugshot-upload">
+                {t("uploadMugshot") || "Mugshot hochladen"}
+                <input type="file" accept="image/*" onChange={e => setMugshotFile(e.target.files?.[0] || null)} />
+              </label>
+            )}
+
+            {mugshotFile && <small className="selected-file">{mugshotFile.name}</small>}
+
+            <div className="profile-badges">
+              <span>{labelValue(draft.status, lang)}</span>
+              <span>{labelValue(draft.riskLevel, lang)}</span>
+            </div>
+
+            <div className="flag-list">
+              {activeFlags.length ? activeFlags.map(([key]) => (
+                <span key={key} className="flag-badge">{t(key) || key}</span>
+              )) : <span className="muted">{lang === "de" ? "Keine Warnhinweise" : "No warning flags"}</span>}
+            </div>
+          </aside>
+
+          <main className="person-profile-main">
+            <section className="module-card">
+              <h3>{t("profileDetails") || "Profildaten"}</h3>
+              <div className="grid-2">
+                <input disabled={!mayEdit} value={draft.name} onChange={e => setField("name", e.target.value)} placeholder={t("personName") || "Name"} />
+                <input disabled={!mayEdit} value={draft.alias} onChange={e => setField("alias", e.target.value)} placeholder={t("alias") || "Alias"} />
+                <select disabled={!mayEdit} value={draft.status} onChange={e => setField("status", e.target.value)}>
+                  {PERSON_STATUSES.map(value => <option key={value} value={value}>{labelValue(value, lang)}</option>)}
+                </select>
+                <select disabled={!mayEdit} value={draft.riskLevel} onChange={e => setField("riskLevel", e.target.value)}>
+                  {RISK_LEVELS.map(value => <option key={value} value={value}>{labelValue(value, lang)}</option>)}
+                </select>
+              </div>
+              <textarea disabled={!mayEdit} value={draft.notes} onChange={e => setField("notes", e.target.value)} placeholder="Intelligence notes" />
+
+              <h3>{t("warningFlags") || "Warnhinweise"}</h3>
+              <div className="flags-grid">
+                {["armed", "dangerous", "underSurveillance", "knownAssociate"].map(flag => (
+                  <label key={flag}>
+                    <input disabled={!mayEdit} type="checkbox" checked={Boolean(draft.flags?.[flag])} onChange={e => setFlag(flag, e.target.checked)} />
+                    {t(flag) || flag}
+                  </label>
+                ))}
+              </div>
+
+              {mayEdit && <button onClick={saveProfile}>{t("saveProfile") || "Profil speichern"}</button>}
+            </section>
+
+            <section className="module-card">
+              <h3>{t("connectedCases") || "Verbundene Akten"}</h3>
+              <div className="module-list">
+                {linkedCases.length ? linkedCases.map(caseFile => (
+                  <article key={caseFile.id} className="record-card">
+                    <b>{caseFile.caseNo || caseFile.id}</b>
+                    <span>{caseFile.title}</span>
+                    <p>{caseFile.status} · {caseFile.priority}</p>
+                  </article>
+                )) : <p className="muted">{t("noRecords") || "Keine Einträge vorhanden."}</p>}
+              </div>
+            </section>
+
+            <section className="module-card">
+              <h3>{t("relationships") || "Beziehungen"}</h3>
+              <div className="module-list">
+                {(person.relationships || []).length ? person.relationships.map((rel, index) => (
+                  <article key={index} className="record-card">
+                    <b>{rel.fromName} → {rel.toName}</b>
+                    <span>{rel.type} · {rel.caseNo || "-"}</span>
+                    <p>{rel.note || "-"}</p>
+                  </article>
+                )) : <p className="muted">{t("noRecords") || "Keine Einträge vorhanden."}</p>}
+              </div>
+            </section>
+          </main>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+
 function Dashboard({ user, profile }) {
   const ranks = useRanks();
   const [active, setActive] = useState("dashboard");
@@ -1783,6 +1963,52 @@ function Dashboard({ user, profile }) {
               ))}
             </div>
           </section>
+        )}
+
+
+        {active === "personal" && (
+          <section className="admin-panel">
+            <div className="admin-head">
+              <div>
+                <span className="eyebrow">{t("intelligence")}</span>
+                <h2>{t("personsDatabase") || "Personendatenbank"}</h2>
+                <p>{lang === "de" ? "Zentrale Personenprofile aus allen Akten." : "Central person profiles from all case files."}</p>
+              </div>
+              <div className="admin-count">{persons.length} {t("linkedPersons")}</div>
+            </div>
+
+            <div className="person-register-grid">
+              {persons.length ? persons.map(person => (
+                <article className="person-card-pro" key={person.id} onClick={() => setSelectedPersonId(person.id)}>
+                  <div className="person-card-image">
+                    {person.mugshot?.url ? <img src={person.mugshot.url} alt={person.name} /> : <span>NO IMAGE</span>}
+                  </div>
+                  <div>
+                    <b>{person.name}</b>
+                    <span>{person.alias || "-"} · {labelValue(person.status, lang)}</span>
+                    <p>{labelValue(person.riskLevel, lang)} · {(person.caseNumbers || []).length} {t("connectedCases")}</p>
+                    <div className="mini-flags">
+                      {person.flags?.armed && <em>{t("armed")}</em>}
+                      {person.flags?.dangerous && <em>{t("dangerous")}</em>}
+                      {person.flags?.underSurveillance && <em>{t("underSurveillance")}</em>}
+                    </div>
+                  </div>
+                </article>
+              )) : <p className="muted">{t("noPersons") || "Keine Personenprofile vorhanden"}</p>}
+            </div>
+          </section>
+        )}
+
+        {selectedPersonId && (
+          <PersonProfilePanel
+            person={persons.find(p => p.id === selectedPersonId)}
+            cases={cases}
+            profile={profile}
+            ranks={ranks}
+            onClose={() => setSelectedPersonId(null)}
+            t={t}
+            lang={lang}
+          />
         )}
 
         {!["dashboard", "akten", "admin", "personal"].includes(active) && (
