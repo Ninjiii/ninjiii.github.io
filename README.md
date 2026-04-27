@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -305,17 +305,14 @@ Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, dami
 - ZIP wurde vor Ausgabe auf diese States geprüft.
 
 
-## V19 Personalregister PRO
+## V19.1 Personalregister Stable
 
-- Personalregister wurde zu echten Personenprofilen ausgebaut.
-- Personenkarten mit Mugshot, Status, Risiko und Warnhinweisen.
-- Profilfenster mit:
-  - Mugshot Upload
-  - Name / Alias
-  - Personenstatus
-  - Risikostufe
-  - Intelligence Notes
-  - Warnflags: bewaffnet, gefährlich, unter Beobachtung, bekannter Kontakt
-  - verknüpfte Akten
-  - Beziehungen
-- Storage Rules wurden um `/persons/{personId}/...` für Mugshots erweitert.
+- Personalregister wurde stabil auf V18.4 neu eingebaut.
+- Sidebar-Punkt `Personal` zeigt jetzt die Personenkarten.
+- Klick auf Person öffnet Personenprofil.
+- Mugshot Upload, Warnflags, Profildaten und verbundene Akten.
+- ZIP wurde vor Ausgabe geprüft auf:
+  - `active === "personal"`
+  - `PersonProfilePanel`
+  - `setSelectedPersonId`
+  - `person-register-grid`
