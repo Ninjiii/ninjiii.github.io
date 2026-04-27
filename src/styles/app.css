@@ -1393,3 +1393,134 @@ h1, h2, h3, p { margin-top: 0; }
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   line-height: 1.5;
 }
+
+
+/* V18 Intelligence Network PRO */
+.network-pro-canvas {
+  position: relative;
+  height: min(620px, 62vh);
+  min-height: 440px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at center, rgba(199,164,91,.12), transparent 32%),
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
+    rgba(4,7,12,.76);
+  background-size: auto, 36px 36px, 36px 36px, auto;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.network-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.network-line {
+  stroke: rgba(199,164,91,.52);
+  stroke-width: .25;
+  vector-effect: non-scaling-stroke;
+}
+
+.network-line-accomplice,
+.network-line-organization-link {
+  stroke: rgba(216,92,104,.72);
+  stroke-width: .35;
+}
+
+.network-line-contact,
+.network-line-associate {
+  stroke: rgba(107,152,255,.62);
+}
+
+.network-line-family {
+  stroke: rgba(123,212,154,.68);
+}
+
+.network-line-label {
+  fill: rgba(230,203,137,.78);
+  font-size: 2.2px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  letter-spacing: .1em;
+}
+
+.network-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 142px;
+  max-width: 190px;
+  display: grid;
+  gap: 4px;
+  text-align: center;
+  border-radius: 4px;
+  padding: 11px;
+  z-index: 3;
+  white-space: normal;
+}
+
+.network-node b {
+  font-size: 11px;
+  color: #f2d890;
+}
+
+.network-node span {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: .03em;
+}
+
+.network-node-case {
+  border-color: rgba(199,164,91,.76);
+  background: rgba(199,164,91,.18);
+  box-shadow: 0 0 28px rgba(199,164,91,.16);
+}
+
+.network-node-person {
+  border-color: rgba(107,152,255,.52);
+  background: rgba(16,24,38,.92);
+}
+
+.network-node-linked-case {
+  border-color: rgba(123,212,154,.50);
+  background: rgba(123,212,154,.10);
+}
+
+.network-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.network-legend span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+
+.legend-case { background: rgba(199,164,91,.12); }
+.legend-person { background: rgba(107,152,255,.10); }
+.legend-linked { background: rgba(123,212,154,.10); }
+
+@media (max-width: 900px) {
+  .network-pro-canvas {
+    min-height: 560px;
+  }
+
+  .network-node {
+    min-width: 118px;
+    max-width: 150px;
+    padding: 9px;
+  }
+
+  .network-line-label {
+    display: none;
+  }
+}

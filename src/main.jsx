@@ -774,9 +774,77 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     onClose();
   }
 
+  function buildNetworkNodes() {
+    const linkedPersons = selected.personRefs || [];
+    const relationships = selected.relationships || [];
+    const linkedCases = selected.linkedCases || [];
+
+    const nodes = [
+      {
+        id: "case-root",
+        type: "case",
+        label: selected.caseNo || "CASE",
+        subtitle: selected.title || "",
+        x: 50,
+        y: 50
+      }
+    ];
+
+    linkedPersons.forEach((person, index) => {
+      const angle = (Math.PI * 2 * index) / Math.max(linkedPersons.length, 1);
+      nodes.push({
+        id: `person-${person.id}`,
+        type: "person",
+        label: person.name,
+        subtitle: person.alias || labelValue(person.status, lang),
+        ref: person,
+        x: 50 + Math.cos(angle) * 30,
+        y: 50 + Math.sin(angle) * 28
+      });
+    });
+
+    linkedCases.forEach((link, index) => {
+      const offset = linkedCases.length <= 1 ? 0 : (index / (linkedCases.length - 1)) * 70 - 35;
+      nodes.push({
+        id: `linked-${index}`,
+        type: "linked-case",
+        label: link.ref,
+        subtitle: t("linkedCases"),
+        ref: link,
+        x: 50 + offset,
+        y: 88
+      });
+    });
+
+    const edges = [
+      ...linkedPersons.map(person => ({
+        id: `case-person-${person.id}`,
+        from: "case-root",
+        to: `person-${person.id}`,
+        type: "CASE LINK"
+      })),
+      ...linkedCases.map((link, index) => ({
+        id: `case-linked-${index}`,
+        from: "case-root",
+        to: `linked-${index}`,
+        type: "LINKED CASE"
+      })),
+      ...relationships.map((rel, index) => ({
+        id: `rel-${index}`,
+        from: `person-${rel.fromPersonId}`,
+        to: `person-${rel.toPersonId}`,
+        type: rel.type,
+        note: rel.note
+      }))
+    ];
+
+    return { nodes, edges };
+  }
+
   const tabs = [
     ["overview", t("overview")],
     ["intelligence", t("intelligence")],
+    ["network", t("networkPro") || "Netzwerk PRO"],
     ["investigation", t("investigation")],
     ["assignments", t("assignments")],
     ["links", t("linkedCases")],
@@ -929,6 +997,113 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
           </section>
         </div>
       )}
+
+      {tab === "network" && (() => {
+        const { nodes, edges } = buildNetworkNodes();
+        const nodeById = Object.fromEntries(nodes.map(node => [node.id, node]));
+
+        return (
+          <div className="detail-grid">
+            <section className="module-card span-2">
+              <div className="module-heading-row">
+                <h3>{t("relationshipMap") || "Beziehungsnetz"}</h3>
+                <div className="network-legend">
+                  <span className="legend-case">{t("caseNode") || "Akte"}</span>
+                  <span className="legend-person">{t("personNode") || "Person"}</span>
+                  <span className="legend-linked">{t("linkedCaseNode") || "Verknüpfte Akte"}</span>
+                </div>
+              </div>
+
+              <div className="network-pro-canvas">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="network-lines">
+                  {edges.map(edge => {
+                    const from = nodeById[edge.from];
+                    const to = nodeById[edge.to];
+                    if (!from || !to) return null;
+
+                    return (
+                      <g key={edge.id}>
+                        <line
+                          x1={from.x}
+                          y1={from.y}
+                          x2={to.x}
+                          y2={to.y}
+                          className={`network-line network-line-${edge.type?.toLowerCase().replaceAll(" ", "-")}`}
+                        />
+                        <text
+                          x={(from.x + to.x) / 2}
+                          y={(from.y + to.y) / 2}
+                          className="network-line-label"
+                        >
+                          {edge.type}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+
+                {nodes.map(node => (
+                  <button
+                    key={node.id}
+                    className={`network-node network-node-${node.type}`}
+                    style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                    onClick={() => setNetworkSelection(node)}
+                  >
+                    <b>{node.label}</b>
+                    <span>{node.subtitle}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="module-card">
+              <h3>{t("selectedNode") || "Ausgewählter Knoten"}</h3>
+              {networkSelection ? (
+                <article className="record-card">
+                  <b>{networkSelection.label}</b>
+                  <span>{networkSelection.type}</span>
+                  <p>{networkSelection.subtitle || "-"}</p>
+                </article>
+              ) : (
+                <p className="muted">{t("noNodeSelected") || "Kein Knoten ausgewählt"}</p>
+              )}
+
+              <h3>{t("relationships") || "Beziehungen"}</h3>
+              {(selected.relationships || []).map((rel, i) => (
+                <article className="record-card" key={i}>
+                  <b>{rel.fromName} → {rel.toName}</b>
+                  <span>{rel.type} · {rel.createdAt} · {rel.by}</span>
+                  <p>{rel.note || "-"}</p>
+                </article>
+              ))}
+            </section>
+
+            {mayEdit && (
+              <section className="module-card">
+                <h3>{t("addRelationship") || "Beziehung hinzufügen"}</h3>
+                <select value={relationshipDraft.fromPersonId} onChange={e => setRelationshipDraft({ ...relationshipDraft, fromPersonId: e.target.value })}>
+                  <option value="">Person A...</option>
+                  {(selected.personRefs || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <select value={relationshipDraft.toPersonId} onChange={e => setRelationshipDraft({ ...relationshipDraft, toPersonId: e.target.value })}>
+                  <option value="">Person B...</option>
+                  {(selected.personRefs || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <select value={relationshipDraft.type} onChange={e => setRelationshipDraft({ ...relationshipDraft, type: e.target.value })}>
+                  <option>ASSOCIATE</option>
+                  <option>ACCOMPLICE</option>
+                  <option>CONTACT</option>
+                  <option>FAMILY</option>
+                  <option>INFORMANT LINK</option>
+                  <option>ORGANIZATION LINK</option>
+                </select>
+                <textarea value={relationshipDraft.note} onChange={e => setRelationshipDraft({ ...relationshipDraft, note: e.target.value })} placeholder="Relationship note" />
+                <button onClick={addRelationship}>{t("addRelationship") || "Beziehung hinzufügen"}</button>
+              </section>
+            )}
+          </div>
+        );
+      })()}
 
       {tab === "intelligence" && (
         <div className="detail-grid">
