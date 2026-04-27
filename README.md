@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -311,3 +311,10 @@ Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, dami
 - Alte doppelte Personal-Blöcke mit fehlendem `t(...)` / `lang` entfernt.
 - Dashboard-Personalregister nutzt jetzt feste deutsche Labels und kann die App nicht mehr beim Start crashen.
 - Personenprofil, Mugshot Upload und Warnflags bleiben enthalten.
+
+
+## V19.3 selectedPersonId Fix
+
+- Fehler `selectedPersonId is not defined` behoben.
+- Der State wird jetzt explizit innerhalb der `Dashboard`-Funktion eingefügt.
+- ZIP wurde geprüft: State steht vor der Verwendung im Dashboard.
