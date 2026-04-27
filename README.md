@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -305,14 +305,9 @@ Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, dami
 - ZIP wurde vor Ausgabe auf diese States geprüft.
 
 
-## V19.1 Personalregister Stable
+## V19.2 Personalregister Load Fix
 
-- Personalregister wurde stabil auf V18.4 neu eingebaut.
-- Sidebar-Punkt `Personal` zeigt jetzt die Personenkarten.
-- Klick auf Person öffnet Personenprofil.
-- Mugshot Upload, Warnflags, Profildaten und verbundene Akten.
-- ZIP wurde vor Ausgabe geprüft auf:
-  - `active === "personal"`
-  - `PersonProfilePanel`
-  - `setSelectedPersonId`
-  - `person-register-grid`
+- Startseiten-Crash behoben.
+- Alte doppelte Personal-Blöcke mit fehlendem `t(...)` / `lang` entfernt.
+- Dashboard-Personalregister nutzt jetzt feste deutsche Labels und kann die App nicht mehr beim Start crashen.
+- Personenprofil, Mugshot Upload und Warnflags bleiben enthalten.
