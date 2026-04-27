@@ -1380,3 +1380,25 @@ h1, h2, h3, p { margin-top: 0; }
     display: none;
   }
 }
+
+
+/* V17 Intelligence Network + Documents */
+.relationship-node {
+  border-color: rgba(239,195,109,.48);
+  background: rgba(239,195,109,.10);
+}
+
+.report-card p {
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.report-editor-textarea {
+  min-height: 260px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  line-height: 1.5;
+}
+
+.intel-node.relationship-node::after {
+  background: rgba(239,195,109,.56);
+}

@@ -133,6 +133,12 @@ export async function exportCasePdf(caseFile) {
     y += 4;
   }
 
+  addSection("Intelligence Relationships");
+  addLine("Records", (caseFile.relationships || []).map(r => `- ${r.fromName} -> ${r.toName} [${r.type}]: ${r.note || ""}`).join("\n"));
+
+  addSection("Internal Reports");
+  addLine("Records", (caseFile.reports || []).map(r => `- ${r.id} ${r.title} [${r.type}] by ${r.createdBy}\n${r.content}`).join("\n\n"));
+
   addSection("Linked Cases");
   addLine("Records", (caseFile.linkedCases || []).map(l => `- ${l.ref} (${l.addedAt || ""} ${l.by || ""})`).join("\n"));
 
