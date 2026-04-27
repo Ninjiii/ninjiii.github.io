@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -273,3 +273,11 @@ Einbau:
 - Beziehungen werden im PDF-Export ergänzt
 
 Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, damit sie im Netzwerk erscheinen.
+
+
+## V18.1 Network PRO Blackscreen Fix
+
+- Network-PRO-Tab rendert jetzt defensiv.
+- `replaceAll` durch kompatible `safeClassName()` ersetzt.
+- Leere oder fehlerhafte Personen-/Beziehungsdaten crashen die Akte nicht mehr.
+- Netzwerk zeigt mindestens den Case-Knoten, auch wenn noch keine Personen verknüpft sind.
