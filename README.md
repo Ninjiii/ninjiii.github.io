@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -296,3 +296,10 @@ Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, dami
 - Fehler `networkSelection is not defined` behoben.
 - `relationshipDraft` wird ebenfalls abgesichert.
 - `<!doctype html>` ergänzt, um Quirks Mode zu vermeiden.
+
+
+## V18.4 Real NetworkSelection Fix
+
+- `networkSelection` wurde jetzt wirklich direkt in `CaseDetails` eingefügt.
+- `relationshipDraft` wurde dort ebenfalls gesetzt.
+- ZIP wurde vor Ausgabe auf diese States geprüft.
