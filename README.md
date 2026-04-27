@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -244,21 +244,14 @@ Einbau:
 - Intelligence-Tab bleibt enthalten.
 
 
-## V17 Intelligence Network + Dokumente
+## V17 Stable
 
-- Personen können miteinander in Beziehung gesetzt werden:
-  - ASSOCIATE
-  - ACCOMPLICE
-  - FAMILY
-  - CONTACT
-  - INFORMANT LINK
-  - ORGANIZATION LINK
-- Beziehungen werden in der Akte und in den Personenprofilen gespeichert.
-- Intelligence-Netzwerk zeigt jetzt auch Beziehungen.
-- Neuer Tab `Berichte` / `Reports`.
-- Interner Berichtseditor mit Vorlagen:
+- Stabiler `Berichte`-Tab direkt im Aktenfenster.
+- Berichtseditor mit Vorlagen:
   - Ermittlungsbericht
   - Vernehmungsprotokoll
   - Einsatzbericht
   - Beweismittelbericht
-- Berichte werden in der Akte gespeichert und im PDF exportiert.
+- Berichte werden direkt in der jeweiligen Akte gespeichert.
+- Berichte werden im PDF-Export ausgegeben.
+- Diese Version basiert auf der stabilen V16.2-Basis.
