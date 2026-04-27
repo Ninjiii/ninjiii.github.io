@@ -2,7 +2,7 @@
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
-## Funktionen V2
+## Funktionen V1
 
 - Login / Registrierung per E-Mail und Passwort
 - Rollen-Grundsystem: Administrator, Direktor, Leitung, Ermittler, Agent, Anwärter
@@ -81,3 +81,22 @@ Die App nutzt eine zweite Firebase-App-Instanz, um neue Accounts anzulegen, ohne
   - `firebase-storage.rules`
 
 Hinweis: Firebase Security Rules können dynamische Checkbox-Rechte aus `settings/ranks` nur eingeschränkt serverseitig auswerten. Darum schützt die App die frei konfigurierbaren Rechte im UI, während die Rules die sicherheitskritischen Grenzen absichern.
+
+
+## Neu in V5 Eigene Fälle
+
+- Administrator, Director/Direktor und Leitung sehen alle Akten.
+- Ermittler, Agenten und Anwärter sehen nur eigene oder ihnen zugewiesene Akten.
+- Eigene Akten werden über `createdBy`, `assigneeUid` oder `assignee == E-Mail` erkannt.
+- Akten-Details blockieren unberechtigte Zugriffe im UI.
+- Firestore-Regeln sichern Einzelzugriffe zusätzlich ab.
+- Storage-Dateien sind ebenfalls an die Aktenberechtigung gekoppelt.
+
+Hinweis: Die Listenabfrage bleibt aus Kompatibilitätsgründen breit erlaubt und wird clientseitig gefiltert. Für eine spätere High-Security-Version sollten getrennte Firestore-Queries mit `where("createdBy", "==", uid)` und `where("assigneeUid", "==", uid)` eingebaut werden.
+
+
+## Neu in V6 Admin-Fix
+
+- Administrator hat jetzt immer Vollrechte, auch wenn `settings/ranks` alte oder unvollständige Rechte enthält.
+- Beim Öffnen des Adminbereichs repariert ein Administrator die gespeicherte Rangliste automatisch.
+- Falls vorher `Administrator` ohne `manageUsers`, `createUsers` oder `manageRanks` gespeichert war, ist das damit behoben.

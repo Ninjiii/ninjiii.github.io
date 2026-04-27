@@ -50,6 +50,7 @@ function emptyCase(user) {
     status: "Offen",
     priority: "Normal",
     assignee: user?.email || "",
+    assigneeUid: user?.uid || "",
     description: "",
     tagsInput: "",
     notesInput: "",
@@ -183,6 +184,7 @@ function CaseForm({ user, onCreate }) {
       status: form.status,
       priority: form.priority,
       assignee: form.assignee,
+      assigneeUid: form.assignee === user.email ? user.uid : form.assigneeUid,
       description: form.description,
       tags: form.tagsInput.split(",").map(t => t.trim()).filter(Boolean),
       notes: form.notesInput ? [{ text: form.notesInput, date: new Date().toISOString() }] : [],
@@ -234,6 +236,22 @@ function CaseDetails({ selected, profile, ranks, onClose }) {
   const mayEdit = can(profile.role, "edit", ranks);
   const mayExport = can(profile.role, "export", ranks);
   const mayDelete = can(profile.role, "delete", ranks);
+  const mayAccessCase = canSeeAllCases(profile.role) || isOwnOrAssignedCase(selected, auth.currentUser);
+
+  if (!mayAccessCase) {
+    return (
+      <section className="details">
+        <header>
+          <div>
+            <span className="eyebrow">Zugriff verweigert</span>
+            <h2>Akte gesperrt</h2>
+          </div>
+          <button className="ghost" onClick={onClose}>Schließen</button>
+        </header>
+        <p>Dein Rang darf nur eigene oder zugewiesene Akten öffnen.</p>
+      </section>
+    );
+  }
 
   async function addNote() {
     if (!mayEdit) return;
@@ -378,6 +396,17 @@ function useRanks() {
   }, []);
 
   return ranks;
+}
+
+function canSeeAllCases(role) {
+  return ["Administrator", "Director", "Direktor", "Leitung"].includes(role);
+}
+
+function isOwnOrAssignedCase(caseFile, user) {
+  if (!caseFile || !user) return false;
+  return caseFile.createdBy === user.uid
+    || caseFile.assigneeUid === user.uid
+    || caseFile.assignee === user.email;
 }
 
 function AdminPanel({ currentUser, profile, ranks }) {
@@ -726,6 +755,7 @@ function Dashboard({ user, profile }) {
   const ranks = useRanks();
   const mayReadCases = can(profile.role, "read", ranks);
   const mayCreateCases = can(profile.role, "create", ranks);
+  const mayViewAllCases = canSeeAllCases(profile.role);
   const [active, setActive] = useState("akten");
   const [cases, setCases] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -735,9 +765,14 @@ function Dashboard({ user, profile }) {
   useEffect(() => {
     const q = query(collection(db, "cases"), orderBy("createdAt", "desc"));
     return onSnapshot(q, snap => {
-      setCases(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const loadedCases = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setCases(
+        mayViewAllCases
+          ? loadedCases
+          : loadedCases.filter(caseFile => isOwnOrAssignedCase(caseFile, user))
+      );
     });
-  }, []);
+  }, [mayViewAllCases, user]);
 
   const selected = cases.find(c => c.id === selectedId);
   const filtered = useMemo(() => {
@@ -775,6 +810,7 @@ function Dashboard({ user, profile }) {
 
             <section className="toolbar">
               <div className="search"><Search size={18} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Akten durchsuchen..." /></div>
+              <div className="access-chip">{mayViewAllCases ? "Vollzugriff" : "Eigene / zugewiesene Akten"}</div>
               {mayCreateCases && <button onClick={() => setShowForm(!showForm)}><Plus size={18} /> Neue Akte</button>}
             </section>
 
