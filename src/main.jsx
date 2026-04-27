@@ -100,6 +100,10 @@ function labelValue(value, lang = "de") {
   return lang === "de" ? (VALUE_LABELS_SIMPLE[value] || value || "-") : (value || "-");
 }
 
+function safeClassName(value) {
+  return String(value || "unknown").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 
 
 function caseNumber(type) {
@@ -775,9 +779,9 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
   }
 
   function buildNetworkNodes() {
-    const linkedPersons = selected.personRefs || [];
-    const relationships = selected.relationships || [];
-    const linkedCases = selected.linkedCases || [];
+    const linkedPersons = Array.isArray(selected.personRefs) ? selected.personRefs : [];
+    const relationships = Array.isArray(selected.relationships) ? selected.relationships : [];
+    const linkedCases = Array.isArray(selected.linkedCases) ? selected.linkedCases : [];
 
     const nodes = [
       {
@@ -999,7 +1003,26 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       )}
 
       {tab === "network" && (() => {
-        const { nodes, edges } = buildNetworkNodes();
+        let nodes = [];
+        let edges = [];
+
+        try {
+          const built = buildNetworkNodes();
+          nodes = Array.isArray(built?.nodes) ? built.nodes : [];
+          edges = Array.isArray(built?.edges) ? built.edges : [];
+        } catch (error) {
+          console.error("Network build failed:", error);
+          nodes = [{
+            id: "case-root",
+            type: "case",
+            label: selected?.caseNo || "CASE",
+            subtitle: selected?.title || "",
+            x: 50,
+            y: 50
+          }];
+          edges = [];
+        }
+
         const nodeById = Object.fromEntries(nodes.map(node => [node.id, node]));
 
         return (
@@ -1024,18 +1047,18 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
                     return (
                       <g key={edge.id}>
                         <line
-                          x1={from.x}
-                          y1={from.y}
-                          x2={to.x}
-                          y2={to.y}
-                          className={`network-line network-line-${edge.type?.toLowerCase().replaceAll(" ", "-")}`}
+                          x1={Number(from.x) || 50}
+                          y1={Number(from.y) || 50}
+                          x2={Number(to.x) || 50}
+                          y2={Number(to.y) || 50}
+                          className={`network-line network-line-${safeClassName(edge.type)}`}
                         />
                         <text
-                          x={(from.x + to.x) / 2}
-                          y={(from.y + to.y) / 2}
+                          x={((Number(from.x) || 50) + (Number(to.x) || 50)) / 2}
+                          y={((Number(from.y) || 50) + (Number(to.y) || 50)) / 2}
                           className="network-line-label"
                         >
-                          {edge.type}
+                          {edge.type || "LINK"}
                         </text>
                       </g>
                     );
@@ -1045,12 +1068,13 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
                 {nodes.map(node => (
                   <button
                     key={node.id}
-                    className={`network-node network-node-${node.type}`}
-                    style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                    type="button"
+                    className={`network-node network-node-${safeClassName(node.type)}`}
+                    style={{ left: `${Number(node.x) || 50}%`, top: `${Number(node.y) || 50}%` }}
                     onClick={() => setNetworkSelection(node)}
                   >
-                    <b>{node.label}</b>
-                    <span>{node.subtitle}</span>
+                    <b>{node.label || "NODE"}</b>
+                    <span>{node.subtitle || "-"}</span>
                   </button>
                 ))}
               </div>
@@ -1060,8 +1084,8 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
               <h3>{t("selectedNode") || "Ausgewählter Knoten"}</h3>
               {networkSelection ? (
                 <article className="record-card">
-                  <b>{networkSelection.label}</b>
-                  <span>{networkSelection.type}</span>
+                  <b>{networkSelection.label || "NODE"}</b>
+                  <span>{networkSelection.type || "-"}</span>
                   <p>{networkSelection.subtitle || "-"}</p>
                 </article>
               ) : (
@@ -1071,11 +1095,12 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
               <h3>{t("relationships") || "Beziehungen"}</h3>
               {(selected.relationships || []).map((rel, i) => (
                 <article className="record-card" key={i}>
-                  <b>{rel.fromName} → {rel.toName}</b>
-                  <span>{rel.type} · {rel.createdAt} · {rel.by}</span>
+                  <b>{rel.fromName || "-"} → {rel.toName || "-"}</b>
+                  <span>{rel.type || "-"} · {rel.createdAt || "-"} · {rel.by || "-"}</span>
                   <p>{rel.note || "-"}</p>
                 </article>
               ))}
+              {!(selected.relationships || []).length && <p className="muted">{t("noRecords") || "Keine Einträge vorhanden."}</p>}
             </section>
 
             {mayEdit && (
@@ -1098,7 +1123,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
                   <option>ORGANIZATION LINK</option>
                 </select>
                 <textarea value={relationshipDraft.note} onChange={e => setRelationshipDraft({ ...relationshipDraft, note: e.target.value })} placeholder="Relationship note" />
-                <button onClick={addRelationship}>{t("addRelationship") || "Beziehung hinzufügen"}</button>
+                <button type="button" onClick={addRelationship}>{t("addRelationship") || "Beziehung hinzufügen"}</button>
               </section>
             )}
           </div>
