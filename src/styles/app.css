@@ -1608,3 +1608,231 @@ h1, h2, h3, p { margin-top: 0; }
   padding: 18px;
   margin: 0;
 }
+
+
+/* V19 Personalregister PRO */
+.person-register-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.person-card-pro {
+  border: 1px solid var(--line);
+  background: rgba(16,24,38,.68);
+  border-radius: 4px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  gap: 12px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.person-card-pro:hover {
+  background: rgba(199,164,91,.08);
+  border-color: rgba(199,164,91,.45);
+}
+
+.person-card-image {
+  width: 84px;
+  height: 104px;
+  border: 1px solid rgba(199,164,91,.30);
+  background: rgba(4,7,12,.78);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: .12em;
+}
+
+.person-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.person-card-pro b {
+  display: block;
+  color: #e6cb89;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.person-card-pro span,
+.person-card-pro p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mini-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mini-flags em,
+.flag-badge {
+  border: 1px solid rgba(216,92,104,.40);
+  background: rgba(216,92,104,.10);
+  color: #ffc2c8;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-style: normal;
+}
+
+.person-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  background: rgba(0,0,0,.82);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.person-profile-panel {
+  width: min(1400px, 96vw);
+  height: min(900px, 92vh);
+  border: 1px solid rgba(199,164,91,.44);
+  background: rgba(6,10,17,.99);
+  border-radius: 6px;
+  overflow: auto;
+  box-shadow: 0 38px 140px rgba(0,0,0,.84);
+  padding: 22px;
+}
+
+.person-profile-panel > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+
+.person-profile-panel h2 {
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.person-profile-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.person-identity-card {
+  border: 1px solid var(--line);
+  background: rgba(16,24,38,.54);
+  border-radius: 4px;
+  padding: 14px;
+  align-self: start;
+}
+
+.mugshot-frame {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 1px solid rgba(199,164,91,.34);
+  background: rgba(4,7,12,.78);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.mugshot-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mugshot-placeholder {
+  color: var(--dim);
+  letter-spacing: .14em;
+  font-weight: 900;
+}
+
+.mugshot-upload {
+  border: 1px dashed rgba(199,164,91,.40);
+  padding: 10px;
+  border-radius: 4px;
+  display: grid;
+  gap: 8px;
+  color: #e6cb89;
+  cursor: pointer;
+  background: rgba(199,164,91,.055);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.profile-badges,
+.flag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.profile-badges span {
+  border: 1px solid rgba(107,152,255,.42);
+  background: rgba(107,152,255,.10);
+  color: #dbe7ff;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.person-profile-main {
+  display: grid;
+  gap: 14px;
+}
+
+.flags-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.flags-grid label {
+  border: 1px solid var(--line);
+  background: rgba(4,7,12,.55);
+  border-radius: 4px;
+  padding: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 11px;
+}
+
+.flags-grid input {
+  width: auto;
+}
+
+@media (max-width: 900px) {
+  .person-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .person-card-pro {
+    grid-template-columns: 1fr;
+  }
+
+  .person-card-image {
+    width: 100%;
+    height: 220px;
+  }
+}
