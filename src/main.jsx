@@ -910,7 +910,13 @@ function Dashboard({ user, profile }) {
         )}
       </main>
 
-      <CaseDetails selected={selected} profile={profile} ranks={ranks} users={users} onClose={() => setSelectedId(null)} />
+      {selected && (
+        <div className="case-modal-backdrop">
+          <div className="case-modal-window">
+            <CaseDetails selected={selected} profile={profile} ranks={ranks} users={users} onClose={() => setSelectedId(null)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

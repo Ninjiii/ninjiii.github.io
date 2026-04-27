@@ -391,7 +391,7 @@ h1, h2, h3, p { margin-top: 0; }
 }
 
 
-/* V8: Große Aktenansicht als zentriertes Fenster */
+/* V8.1: Großes Aktenfenster */
 .case-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -421,6 +421,7 @@ h1, h2, h3, p { margin-top: 0; }
   border: 0;
   border-radius: 0;
   padding: 28px;
+  overflow: auto;
 }
 
 .case-modal-window .details header {

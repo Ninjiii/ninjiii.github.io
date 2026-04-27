@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -131,9 +131,8 @@ Einbau:
 5. Website mit Strg+F5 neu laden.
 
 
-## V8 Großes Aktenfenster
+## V8.1 Großes Aktenfenster Fix
 
-- Akten öffnen jetzt als großes zentriertes Fenster.
-- Die rechte Seitenleiste wurde entfernt.
-- Klick außerhalb des Fensters schließt die Akte.
-- Das Fenster nutzt fast die gesamte Bildschirmbreite und -höhe.
+- Akten öffnen als großes zentriertes Fenster.
+- Kein Klick-außerhalb-Schließen, damit das Modal nicht direkt wieder verschwindet.
+- Rechte Seitenleiste entfernt.
