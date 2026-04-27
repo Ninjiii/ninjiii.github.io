@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -281,3 +281,18 @@ Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, dami
 - `replaceAll` durch kompatible `safeClassName()` ersetzt.
 - Leere oder fehlerhafte Personen-/Beziehungsdaten crashen die Akte nicht mehr.
 - Netzwerk zeigt mindestens den Case-Knoten, auch wenn noch keine Personen verknüpft sind.
+
+
+## V18.2 NetworkPRO Stable
+
+- NetworkPRO wurde von SVG auf einen stabilen CSS-Renderer umgestellt.
+- Keine SVG-/Label-/Klassen-Crashes mehr.
+- Zeigt Aktenknoten, Personen und verknüpfte Akten zuverlässig.
+- Beziehungen können weiterhin erstellt und angezeigt werden.
+
+
+## V18.3 Network Selection Fix
+
+- Fehler `networkSelection is not defined` behoben.
+- `relationshipDraft` wird ebenfalls abgesichert.
+- `<!doctype html>` ergänzt, um Quirks Mode zu vermeiden.
