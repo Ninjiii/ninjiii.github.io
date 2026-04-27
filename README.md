@@ -1,8 +1,8 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
-## Funktionen V2
+## Funktionen V1
 
 - Login / Registrierung per E-Mail und Passwort
 - Rollen-Grundsystem: Administrator, Direktor, Leitung, Ermittler, Agent, Anwärter
@@ -145,3 +145,19 @@ Einbau:
 - Case-Jacket-Fenster, Classification-Badges und kompaktere Tabellen.
 - Dunkler Behördenlook mit Gold-/Blau-Akzenten.
 - Labels teilweise in Richtung Case Management / Command Center angepasst.
+
+
+## V10 Bearbeitbare Akten-Stammdaten
+
+- Sachverhalt kann in der geöffneten Akte bearbeitet werden.
+- Ermittlungsziel kann bearbeitet werden.
+- Status, Priorität und Einstufung können direkt geändert werden.
+- Titel, Aktenart, Ort, Abteilung und Tags können bearbeitet werden.
+- Jede Änderung schreibt einen Chronik-Eintrag.
+
+
+## V10.1 Edit-Fix
+
+- Administrator hat im Case-Fenster immer Bearbeitungsrechte.
+- Update-Fehler werden sichtbar in der Akte angezeigt.
+- Speichern schließt den Editor nur noch, wenn Firestore das Update wirklich angenommen hat.

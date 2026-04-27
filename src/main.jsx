@@ -387,24 +387,81 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
   const [evidence, setEvidence] = useState({ name: "", info: "" });
   const [appointment, setAppointment] = useState({ title: "", date: "" });
   const [uploading, setUploading] = useState(false);
+  const [editCore, setEditCore] = useState(false);
+  const [coreDraft, setCoreDraft] = useState(null);
+  const [caseError, setCaseError] = useState("");
+
+  useEffect(() => {
+    if (!selected) return;
+    setCoreDraft({
+      title: selected.title || "",
+      status: selected.status || "Offen",
+      priority: selected.priority || "Normal",
+      classification: selected.classification || "Intern",
+      type: selected.type || "Fallakte",
+      location: selected.location || "",
+      department: selected.department || "",
+      description: selected.description || "",
+      objective: selected.objective || "",
+      tagsInput: (selected.tags || []).join(", ")
+    });
+    setEditCore(false);
+  }, [selected?.id]);
 
   if (!selected) return null;
 
   const currentUser = auth.currentUser;
-  const mayEdit = can(profile.role, "edit", ranks) && (canSeeAllCases(profile.role) || isOwnOrAssignedCase(selected, currentUser));
+  const mayEdit = profile.role === "Administrator"
+    || (can(profile.role, "edit", ranks) && (canSeeAllCases(profile.role) || isOwnOrAssignedCase(selected, currentUser)));
   const mayExport = can(profile.role, "export", ranks);
   const mayDelete = can(profile.role, "delete", ranks);
   const mayAssign = ["Administrator", "Director", "Direktor", "Leitung"].includes(profile.role);
 
   async function patchCase(data, activityText) {
-    await updateDoc(doc(db, "cases", selected.id), {
-      ...data,
-      activity: [
-        ...(selected.activity || []),
-        { text: activityText, date: new Date().toLocaleString("de-DE"), by: currentUser.email }
-      ],
-      updatedAt: serverTimestamp()
-    });
+    setCaseError("");
+    try {
+      await updateDoc(doc(db, "cases", selected.id), {
+        ...data,
+        activity: [
+          ...(selected.activity || []),
+          { text: activityText, date: new Date().toLocaleString("de-DE"), by: currentUser.email }
+        ],
+        updatedAt: serverTimestamp()
+      });
+      return true;
+    } catch (error) {
+      console.error("Case update failed:", error);
+      setCaseError(`Update fehlgeschlagen: ${error.message}`);
+      return false;
+    }
+  }
+
+  function setCoreField(key, value) {
+    setCoreDraft(current => ({ ...current, [key]: value }));
+  }
+
+  async function saveCoreFields() {
+    if (!mayEdit || !coreDraft) return;
+
+    const ok = await patchCase({
+      title: coreDraft.title,
+      status: coreDraft.status,
+      priority: coreDraft.priority,
+      classification: coreDraft.classification,
+      type: coreDraft.type,
+      location: coreDraft.location,
+      department: coreDraft.department,
+      description: coreDraft.description,
+      objective: coreDraft.objective,
+      tags: coreDraft.tagsInput.split(",").map(tag => tag.trim()).filter(Boolean)
+    }, "Stammdaten der Akte bearbeitet");
+
+    if (ok) setEditCore(false);
+  }
+
+  async function quickUpdateField(key, value, label) {
+    if (!mayEdit) return;
+    await patchCase({ [key]: value }, `${label} geändert auf ${value}`);
   }
 
   async function addNote() {
@@ -504,15 +561,95 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
         {tabs.map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>{label}</button>)}
       </nav>
 
-      {tab === "overview" && (
+      {caseError && <div className="error case-error">{caseError}</div>}
+
+      {tab === "overview" && coreDraft && (
         <div className="detail-grid">
           <section className="module-card span-2">
-            <h3>Sachverhalt</h3>
-            <p>{selected.description || "Keine Beschreibung."}</p>
-            <h3>Ermittlungsziel</h3>
-            <p>{selected.objective || "Kein Ermittlungsziel hinterlegt."}</p>
+            <div className="module-heading-row">
+              <h3>Case Summary / Stammdaten</h3>
+              {mayEdit ? (
+                <button className="ghost" onClick={() => setEditCore(!editCore)}>
+                  {editCore ? "Bearbeitung schließen" : "Stammdaten bearbeiten"}
+                </button>
+              ) : (
+                <span className="permission-warning">Keine Bearbeitungsrechte erkannt</span>
+              )}
+            </div>
+
+            {!editCore && (
+              <>
+                <div className="case-field-grid">
+                  <div><b>Titel</b><span>{selected.title || "-"}</span></div>
+                  <div><b>Aktenart</b><span>{selected.type || "-"}</span></div>
+                  <div><b>Status</b><span>{selected.status || "-"}</span></div>
+                  <div><b>Priorität</b><span>{selected.priority || "-"}</span></div>
+                  <div><b>Einstufung</b><span>{selected.classification || "-"}</span></div>
+                  <div><b>Ort</b><span>{selected.location || "-"}</span></div>
+                </div>
+
+                <h3>Sachverhalt</h3>
+                <p>{selected.description || "Keine Beschreibung."}</p>
+                <h3>Ermittlungsziel</h3>
+                <p>{selected.objective || "Kein Ermittlungsziel hinterlegt."}</p>
+              </>
+            )}
+
+            {editCore && (
+              <div className="core-editor">
+                <div className="grid-3">
+                  <input value={coreDraft.title} onChange={e => setCoreField("title", e.target.value)} placeholder="Titel" />
+                  <select value={coreDraft.type} onChange={e => setCoreField("type", e.target.value)}>
+                    {CASE_TYPES.map(x => <option key={x}>{x}</option>)}
+                  </select>
+                  <select value={coreDraft.classification} onChange={e => setCoreField("classification", e.target.value)}>
+                    {CLASSIFICATIONS.map(x => <option key={x}>{x}</option>)}
+                  </select>
+                  <select value={coreDraft.status} onChange={e => setCoreField("status", e.target.value)}>
+                    {STATUSES.map(x => <option key={x}>{x}</option>)}
+                  </select>
+                  <select value={coreDraft.priority} onChange={e => setCoreField("priority", e.target.value)}>
+                    {PRIORITIES.map(x => <option key={x}>{x}</option>)}
+                  </select>
+                  <input value={coreDraft.location} onChange={e => setCoreField("location", e.target.value)} placeholder="Ort / Einsatzgebiet" />
+                  <input value={coreDraft.department} onChange={e => setCoreField("department", e.target.value)} placeholder="Abteilung" />
+                  <input value={coreDraft.tagsInput} onChange={e => setCoreField("tagsInput", e.target.value)} placeholder="Tags, kommasepariert" />
+                </div>
+
+                <textarea value={coreDraft.description} onChange={e => setCoreField("description", e.target.value)} placeholder="Sachverhalt / Hintergrund" />
+                <textarea value={coreDraft.objective} onChange={e => setCoreField("objective", e.target.value)} placeholder="Ermittlungsziel / Maßnahmenziel" />
+
+                <div className="editor-actions">
+                  <button onClick={saveCoreFields}>Änderungen speichern</button>
+                  <button className="ghost" onClick={() => setEditCore(false)}>Abbrechen</button>
+                </div>
+              </div>
+            )}
           </section>
+
           <section className="module-card">
+            <h3>Schnellstatus</h3>
+            {mayEdit ? (
+              <>
+                <label>Status</label>
+                <select value={selected.status || "Offen"} onChange={e => quickUpdateField("status", e.target.value, "Status")}>
+                  {STATUSES.map(x => <option key={x}>{x}</option>)}
+                </select>
+
+                <label>Priorität</label>
+                <select value={selected.priority || "Normal"} onChange={e => quickUpdateField("priority", e.target.value, "Priorität")}>
+                  {PRIORITIES.map(x => <option key={x}>{x}</option>)}
+                </select>
+
+                <label>Einstufung</label>
+                <select value={selected.classification || "Intern"} onChange={e => quickUpdateField("classification", e.target.value, "Einstufung")}>
+                  {CLASSIFICATIONS.map(x => <option key={x}>{x}</option>)}
+                </select>
+              </>
+            ) : (
+              <p className="muted">Keine Bearbeitungsrechte.</p>
+            )}
+
             <h3>Verantwortung</h3>
             <p><b>Bearbeiter:</b><br />{selected.assignee || "Nicht zugewiesen"}</p>
             <p><b>Ort:</b><br />{selected.location || "-"}</p>
