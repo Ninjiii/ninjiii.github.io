@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -100,3 +100,32 @@ Hinweis: Die Listenabfrage bleibt aus Kompatibilitätsgründen breit erlaubt und
 - Administrator hat jetzt immer Vollrechte, auch wenn `settings/ranks` alte oder unvollständige Rechte enthält.
 - Beim Öffnen des Adminbereichs repariert ein Administrator die gespeicherte Rangliste automatisch.
 - Falls vorher `Administrator` ohne `manageUsers`, `createUsers` oder `manageRanks` gespeichert war, ist das damit behoben.
+
+
+## V7 Großakte
+
+Diese Version baut das Akten-System deutlich größer aus:
+
+- neues Lagezentrum / Dashboard
+- Aktennummern automatisch nach Aktenart
+- Tabellenartige Aktenzentrale statt simpler Karten
+- Filter nach Aktenart und Status
+- Großakten mit Tabs:
+  - Übersicht
+  - Personen / Zielpersonen
+  - Beweise
+  - Dokumente
+  - Notizen
+  - Einsatztagebuch
+  - Chronik
+- Aktenzuweisung an Nutzer
+- Zugriff: Führung sieht alles, normale Ränge sehen eigene/zugewiesene Akten
+- umfangreicher PDF-Export
+- neue Firestore- und Storage-Regeln
+
+Einbau:
+1. Dateien in GitHub ersetzen.
+2. Actions grün abwarten.
+3. `firebase-firestore.rules` in Firestore-Regeln veröffentlichen.
+4. `firebase-storage.rules` in Storage-Regeln veröffentlichen.
+5. Website mit Strg+F5 neu laden.
