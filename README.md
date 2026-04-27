@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -184,3 +184,12 @@ Einbau:
 - Evidence Registry mit Evidence-ID, Typ, Quelle, Status und Chain-of-Custody
 - Audit Trail wird über zentrale Audit-Einträge erweitert
 - PDF-Export enthält Lead/Supervisor/Assigned Agents und Evidence IDs
+
+
+## V13 Evidence Images
+
+- Beweisbilder können direkt beim Evidence-Eintrag hochgeladen werden.
+- Bilder werden in Firebase Storage gespeichert.
+- Evidence-Einträge zeigen eine Bildvorschau in der Akte.
+- Klick auf das Bild öffnet die Originaldatei.
+- PDF-Export bindet Evidence-Bilder ein, soweit der Browser die Datei laden kann.
