@@ -81,7 +81,15 @@ function useAuthProfile() {
       }
 
       const nextSnap = await getDoc(userRef);
-      setState({ user, profile: nextSnap.data(), loading: false });
+      const profile = nextSnap.data();
+
+      if (profile?.suspended) {
+        await signOut(auth);
+        setState({ user: null, profile: null, loading: false });
+        return;
+      }
+
+      setState({ user, profile, loading: false });
     });
   }, []);
 
@@ -335,6 +343,113 @@ function CaseDetails({ selected, profile, onClose }) {
   );
 }
 
+
+function AdminPanel({ currentUser, profile }) {
+  const [users, setUsers] = useState([]);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    if (!can(profile.role, "manageUsers")) return;
+    const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
+    return onSnapshot(q, snap => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+  }, [profile.role]);
+
+  async function updateRole(userId, role) {
+    setStatus("");
+    try {
+      await updateDoc(doc(db, "users", userId), {
+        role,
+        updatedAt: serverTimestamp()
+      });
+      setStatus("Rolle wurde aktualisiert.");
+    } catch (error) {
+      setStatus(`Fehler: ${error.message}`);
+    }
+  }
+
+  async function toggleSuspended(user) {
+    if (user.uid === currentUser.uid) {
+      setStatus("Du kannst deinen eigenen Account nicht sperren.");
+      return;
+    }
+
+    setStatus("");
+    try {
+      await updateDoc(doc(db, "users", user.id), {
+        suspended: !user.suspended,
+        updatedAt: serverTimestamp()
+      });
+      setStatus(user.suspended ? "Account wurde entsperrt." : "Account wurde gesperrt.");
+    } catch (error) {
+      setStatus(`Fehler: ${error.message}`);
+    }
+  }
+
+  if (!can(profile.role, "manageUsers")) {
+    return (
+      <section className="placeholder">
+        <h2>Administration</h2>
+        <p>Du hast keine Berechtigung für diesen Bereich.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="admin-panel">
+      <div className="admin-head">
+        <div>
+          <span className="eyebrow">Administrator-Konsole</span>
+          <h2>Benutzer & Rollen</h2>
+          <p>Verwalte Ränge, Rechte und gesperrte Accounts.</p>
+        </div>
+        <div className="admin-count">{users.length} Nutzer</div>
+      </div>
+
+      {status && <div className="notice">{status}</div>}
+
+      <div className="admin-table">
+        <div className="admin-row admin-row-head">
+          <span>Nutzer</span>
+          <span>Rang</span>
+          <span>Status</span>
+          <span>Aktion</span>
+        </div>
+
+        {users.map(user => (
+          <div className="admin-row" key={user.id}>
+            <div>
+              <strong>{user.displayName || "Unbekannt"}</strong>
+              <small>{user.email}</small>
+            </div>
+
+            <select
+              value={user.role || "Anwärter"}
+              onChange={e => updateRole(user.id, e.target.value)}
+              disabled={user.uid === currentUser.uid}
+            >
+              {ROLES.map(role => <option key={role}>{role}</option>)}
+            </select>
+
+            <span className={user.suspended ? "status-bad" : "status-good"}>
+              {user.suspended ? "Gesperrt" : "Aktiv"}
+            </span>
+
+            <button
+              className={user.suspended ? "ghost" : "danger"}
+              onClick={() => toggleSuspended(user)}
+              disabled={user.uid === currentUser.uid}
+            >
+              {user.suspended ? "Entsperren" : "Sperren"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Dashboard({ user, profile }) {
   const [active, setActive] = useState("akten");
   const [cases, setCases] = useState([]);
@@ -407,7 +522,9 @@ function Dashboard({ user, profile }) {
           </>
         )}
 
-        {active !== "akten" && (
+        {active === "admin" && <AdminPanel currentUser={user} profile={profile} />}
+
+        {active !== "akten" && active !== "admin" && (
           <section className="placeholder">
             <h2>{active}</h2>
             <p>Dieser Bereich ist vorbereitet. Die Daten sind bereits in den Aktenmodulen enthalten und können als eigene Ansicht ausgebaut werden.</p>
