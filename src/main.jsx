@@ -188,8 +188,8 @@ function LoginScreen() {
 
 function Sidebar({ profile, active, setActive }) {
   const nav = [
-    ["dashboard", "Lagezentrum", LayoutDashboard],
-    ["akten", "Aktenzentrale", FolderKanban],
+    ["dashboard", "Command Center", LayoutDashboard],
+    ["akten", "Case Management", FolderKanban],
     ["termine", "Termine", CalendarDays],
     ["dokumente", "Dokumente", FileText],
     ["personal", "Personal", Users],
@@ -240,7 +240,7 @@ function DashboardHome({ cases }) {
   return (
     <section className="home-grid">
       <div className="hero-panel">
-        <span className="eyebrow">Lagezentrum</span>
+        <span className="eyebrow">Command Center</span>
         <h2>Operative Übersicht</h2>
         <p>Live-Ansicht über aktive Akten, kritische Ermittlungen, Observationslagen und letzte Einträge.</p>
         <div className="hero-metrics">
@@ -318,8 +318,8 @@ function CaseForm({ user, users, onCreate }) {
   return (
     <form className="case-form expanded" onSubmit={submit}>
       <div>
-        <span className="eyebrow">Neue Großakte</span>
-        <h2>Akte erfassen</h2>
+        <span className="eyebrow">Neue Case Jacket</span>
+        <h2>Case Intake</h2>
       </div>
 
       <div className="grid-3">
@@ -363,7 +363,7 @@ function CaseForm({ user, users, onCreate }) {
         <input value={form.appointmentDate} onChange={e => set("appointmentDate", e.target.value)} type="datetime-local" />
       </div>
 
-      <button><Plus size={18} /> Großakte speichern</button>
+      <button><Plus size={18} /> Case Jacket speichern</button>
     </form>
   );
 }
@@ -845,7 +845,7 @@ function Dashboard({ user, profile }) {
         <header className="topbar">
           <div>
             <span className="eyebrow">Sicherheitsstufe: {profile.role}</span>
-            <h1>{active === "dashboard" ? "Lagezentrum" : active === "akten" ? "Aktenzentrale" : active}</h1>
+            <h1>{active === "dashboard" ? "Command Center" : active === "akten" ? "Case Management" : active}</h1>
           </div>
           <div className="user-pill">{profile.displayName || user.email}</div>
         </header>
@@ -870,7 +870,7 @@ function Dashboard({ user, profile }) {
                 <option>Alle</option>{STATUSES.map(x => <option key={x}>{x}</option>)}
               </select>
               <div className="access-chip">{mayViewAllCases ? "Vollzugriff" : "Eigene / zugewiesene Akten"}</div>
-              {mayCreateCases && <button onClick={() => setShowForm(!showForm)}><Plus size={18} /> Neue Großakte</button>}
+              {mayCreateCases && <button onClick={() => setShowForm(!showForm)}><Plus size={18} /> Neue Case Jacket</button>}
             </section>
 
             {showForm && <CaseForm user={user} users={users} onCreate={() => setShowForm(false)} />}

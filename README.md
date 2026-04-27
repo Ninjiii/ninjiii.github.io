@@ -136,3 +136,12 @@ Einbau:
 - Akten öffnen als großes zentriertes Fenster.
 - Kein Klick-außerhalb-Schließen, damit das Modal nicht direkt wieder verschwindet.
 - Rechte Seitenleiste entfernt.
+
+
+## V9 Federal UI
+
+- Oberfläche stärker an amerikanisches Federal Case Management angelehnt.
+- Weniger runde Kachel-Optik, mehr Command-Center/Dossier-Stil.
+- Case-Jacket-Fenster, Classification-Badges und kompaktere Tabellen.
+- Dunkler Behördenlook mit Gold-/Blau-Akzenten.
+- Labels teilweise in Richtung Case Management / Command Center angepasst.
