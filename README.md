@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -203,3 +203,13 @@ Einbau:
 - Milestones für Investigation Flow
 - verknüpfte Akten / Linked Cases
 - Linked Cases und Milestones im PDF-Export
+
+
+## V15 Deutsch + Englisch System
+
+- Sprachumschalter oben rechts: Deutsch / English
+- Sprache wird in `localStorage` gespeichert.
+- Interne Werte wie `ACTIVE`, `CONFIDENTIAL`, `CRITICAL` bleiben stabil.
+- Sichtbare Werte werden über `labelValue()` übersetzt.
+- Zentrale Übersetzungen liegen in `LANG` und `VALUE_LABELS` in `src/main.jsx`.
+- UI-Texte für Header, Navigation, Tabs, Evidence Viewer, Admin und Case-Bereiche wurden übersetzbar gemacht.
