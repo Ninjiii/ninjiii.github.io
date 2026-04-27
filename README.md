@@ -2,7 +2,7 @@
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
-Made by Nino Stramonte
+Made by Nino Stramonte v2
 
 ## Funktionen V1
 
