@@ -22,17 +22,26 @@ service cloud.firestore {
       return isActive() && role() == "Administrator";
     }
 
+    function isLeadership() {
+      return isActive() && role() in ["Administrator", "Director", "Direktor"];
+    }
+
     match /users/{userId} {
       allow read: if isActive();
-      allow create: if signedIn() && request.auth.uid == userId;
-      allow update: if isAdmin();
+      allow create: if isLeadership();
+      allow update: if isLeadership();
       allow delete: if isAdmin();
+    }
+
+    match /settings/ranks {
+      allow read: if isActive();
+      allow write: if isAdmin();
     }
 
     match /cases/{caseId} {
       allow read: if isActive();
-      allow create: if isActive() && role() in ["Administrator", "Direktor", "Leitung", "Ermittler", "Agent"];
-      allow update: if isActive() && role() in ["Administrator", "Direktor", "Leitung", "Ermittler"];
+      allow create: if isActive() && role() in ["Administrator", "Director", "Direktor", "Leitung", "Ermittler", "Agent"];
+      allow update: if isActive() && role() in ["Administrator", "Director", "Direktor", "Leitung", "Ermittler"];
       allow delete: if isAdmin();
     }
   }

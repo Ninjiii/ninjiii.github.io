@@ -52,3 +52,18 @@ Die Rollen in V1 werden in Firestore vorbereitet. Für produktive Nutzung müsse
 - Rollen per Dropdown ändern
 - Accounts sperren/entsperren
 - Gesperrte Accounts werden beim Laden automatisch ausgeloggt
+
+
+## Neu in V3
+
+- Öffentliche Registrierung entfernt
+- Accounts werden im Adminbereich angelegt
+- Anzeigenamen frei festlegbar, z.B. `FIB-10 | Fox`
+- Eigene Rangliste in der App verwaltbar
+- Eigene Rechte pro Rang per Checkbox
+- Director/Direktor kann Accounts anlegen
+- Administrator kann Ränge verwalten
+
+## Wichtig zu Firebase Auth
+
+Die App nutzt eine zweite Firebase-App-Instanz, um neue Accounts anzulegen, ohne den aktuellen Admin/Director auszuloggen.
