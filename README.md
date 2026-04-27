@@ -67,3 +67,17 @@ Die Rollen in V1 werden in Firestore vorbereitet. Für produktive Nutzung müsse
 ## Wichtig zu Firebase Auth
 
 Die App nutzt eine zweite Firebase-App-Instanz, um neue Accounts anzulegen, ohne den aktuellen Admin/Director auszuloggen.
+
+
+## Neu in V4 Rechte
+
+- App-Oberfläche prüft Rang-Rechte aus der eigenen Rangliste.
+- Akten lesen, erstellen, bearbeiten, löschen, exportieren werden im UI durchgesetzt.
+- Director/Direktor kann Accounts anlegen, aber keine Administratoren erstellen oder bearbeiten.
+- Administrator verwaltet Rangliste und Rechte.
+- Gesperrte User verlieren Zugriff auf Firestore und Storage.
+- Firestore- und Storage-Regeln sind getrennt:
+  - `firebase-firestore.rules`
+  - `firebase-storage.rules`
+
+Hinweis: Firebase Security Rules können dynamische Checkbox-Rechte aus `settings/ranks` nur eingeschränkt serverseitig auswerten. Darum schützt die App die frei konfigurierbaren Rechte im UI, während die Rules die sicherheitskritischen Grenzen absichern.
