@@ -1610,7 +1610,7 @@ h1, h2, h3, p { margin-top: 0; }
 }
 
 
-/* V19.1 Personalregister Stable */
+/* V19.2 Personalregister Load Fix */
 .person-register-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

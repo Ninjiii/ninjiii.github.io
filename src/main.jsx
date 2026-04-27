@@ -1648,7 +1648,7 @@ function AdminPanel({ currentUser, profile, ranks }) {
 }
 
 
-function PersonProfilePanel({ person, cases, profile, ranks, onClose, t, lang }) {
+function PersonProfilePanel({ person, cases, profile, ranks, onClose }) {
   const [draft, setDraft] = useState(null);
   const [mugshotFile, setMugshotFile] = useState(null);
   const [status, setStatus] = useState("");
@@ -1715,21 +1715,27 @@ function PersonProfilePanel({ person, cases, profile, ranks, onClose, t, lang })
       updatedAt: serverTimestamp()
     });
 
-    setStatus(lang === "de" ? "Profil gespeichert." : "Profile saved.");
+    setStatus("Profil gespeichert.");
     setMugshotFile(null);
   }
 
   const activeFlags = Object.entries(draft.flags || {}).filter(([, value]) => value);
+  const flagLabels = {
+    armed: "Bewaffnet",
+    dangerous: "Gefährlich",
+    underSurveillance: "Unter Beobachtung",
+    knownAssociate: "Bekannter Kontakt"
+  };
 
   return (
     <div className="person-modal-backdrop">
       <section className="person-profile-panel">
         <header>
           <div>
-            <span className="eyebrow">{t("personProfile") || "Personenprofil"}</span>
+            <span className="eyebrow">Personenprofil</span>
             <h2>{person.name}</h2>
           </div>
-          <button className="ghost" onClick={onClose}>{t("close") || "Schließen"}</button>
+          <button className="ghost" onClick={onClose}>Schließen</button>
         </header>
 
         {status && <div className="notice">{status}</div>}
@@ -1746,7 +1752,7 @@ function PersonProfilePanel({ person, cases, profile, ranks, onClose, t, lang })
 
             {mayEdit && (
               <label className="mugshot-upload">
-                {t("uploadMugshot") || "Mugshot hochladen"}
+                Mugshot hochladen
                 <input type="file" accept="image/*" onChange={e => setMugshotFile(e.target.files?.[0] || null)} />
               </label>
             )}
@@ -1754,47 +1760,48 @@ function PersonProfilePanel({ person, cases, profile, ranks, onClose, t, lang })
             {mugshotFile && <small className="selected-file">{mugshotFile.name}</small>}
 
             <div className="profile-badges">
-              <span>{labelValue(draft.status, lang)}</span>
-              <span>{labelValue(draft.riskLevel, lang)}</span>
+              <span>{draft.status}</span>
+              <span>{draft.riskLevel}</span>
             </div>
 
             <div className="flag-list">
               {activeFlags.length ? activeFlags.map(([key]) => (
-                <span key={key} className="flag-badge">{t(key) || key}</span>
-              )) : <span className="muted">{lang === "de" ? "Keine Warnhinweise" : "No warning flags"}</span>}
+                <span key={key} className="flag-badge">{flagLabels[key] || key}</span>
+              )) : <span className="muted">Keine Warnhinweise</span>}
             </div>
           </aside>
 
           <main className="person-profile-main">
             <section className="module-card">
-              <h3>{t("profileDetails") || "Profildaten"}</h3>
+              <h3>Profildaten</h3>
               <div className="grid-2">
-                <input disabled={!mayEdit} value={draft.name} onChange={e => setField("name", e.target.value)} placeholder={t("personName") || "Name"} />
-                <input disabled={!mayEdit} value={draft.alias} onChange={e => setField("alias", e.target.value)} placeholder={t("alias") || "Alias"} />
+                <input disabled={!mayEdit} value={draft.name} onChange={e => setField("name", e.target.value)} placeholder="Name" />
+                <input disabled={!mayEdit} value={draft.alias} onChange={e => setField("alias", e.target.value)} placeholder="Alias" />
                 <select disabled={!mayEdit} value={draft.status} onChange={e => setField("status", e.target.value)}>
-                  {PERSON_STATUSES.map(value => <option key={value} value={value}>{labelValue(value, lang)}</option>)}
+                  {PERSON_STATUSES.map(value => <option key={value} value={value}>{value}</option>)}
                 </select>
                 <select disabled={!mayEdit} value={draft.riskLevel} onChange={e => setField("riskLevel", e.target.value)}>
-                  {RISK_LEVELS.map(value => <option key={value} value={value}>{labelValue(value, lang)}</option>)}
+                  {RISK_LEVELS.map(value => <option key={value} value={value}>{value}</option>)}
                 </select>
               </div>
-              <textarea disabled={!mayEdit} value={draft.notes} onChange={e => setField("notes", e.target.value)} placeholder="Intelligence notes" />
 
-              <h3>{t("warningFlags") || "Warnhinweise"}</h3>
+              <textarea disabled={!mayEdit} value={draft.notes} onChange={e => setField("notes", e.target.value)} placeholder="Intelligence Notes" />
+
+              <h3>Warnhinweise</h3>
               <div className="flags-grid">
                 {["armed", "dangerous", "underSurveillance", "knownAssociate"].map(flag => (
                   <label key={flag}>
                     <input disabled={!mayEdit} type="checkbox" checked={Boolean(draft.flags?.[flag])} onChange={e => setFlag(flag, e.target.checked)} />
-                    {t(flag) || flag}
+                    {flagLabels[flag] || flag}
                   </label>
                 ))}
               </div>
 
-              {mayEdit && <button onClick={saveProfile}>{t("saveProfile") || "Profil speichern"}</button>}
+              {mayEdit && <button onClick={saveProfile}>Profil speichern</button>}
             </section>
 
             <section className="module-card">
-              <h3>{t("connectedCases") || "Verbundene Akten"}</h3>
+              <h3>Verbundene Akten</h3>
               <div className="module-list">
                 {linkedCases.length ? linkedCases.map(caseFile => (
                   <article key={caseFile.id} className="record-card">
@@ -1802,12 +1809,12 @@ function PersonProfilePanel({ person, cases, profile, ranks, onClose, t, lang })
                     <span>{caseFile.title}</span>
                     <p>{caseFile.status} · {caseFile.priority}</p>
                   </article>
-                )) : <p className="muted">{t("noRecords") || "Keine Einträge vorhanden."}</p>}
+                )) : <p className="muted">Keine Einträge vorhanden.</p>}
               </div>
             </section>
 
             <section className="module-card">
-              <h3>{t("relationships") || "Beziehungen"}</h3>
+              <h3>Beziehungen</h3>
               <div className="module-list">
                 {(person.relationships || []).length ? person.relationships.map((rel, index) => (
                   <article key={index} className="record-card">
@@ -1815,7 +1822,7 @@ function PersonProfilePanel({ person, cases, profile, ranks, onClose, t, lang })
                     <span>{rel.type} · {rel.caseNo || "-"}</span>
                     <p>{rel.note || "-"}</p>
                   </article>
-                )) : <p className="muted">{t("noRecords") || "Keine Einträge vorhanden."}</p>}
+                )) : <p className="muted">Keine Einträge vorhanden.</p>}
               </div>
             </section>
           </main>
@@ -1942,39 +1949,16 @@ function Dashboard({ user, profile }) {
 
         {active === "admin" && <AdminPanel currentUser={user} profile={profile} ranks={ranks} />}
 
-        {active === "personal" && (
-          <section className="admin-panel">
-            <div className="admin-head">
-              <div>
-                <span className="eyebrow">{t("intelligence")}</span>
-                <h2>{t("personsDatabase")}</h2>
-                <p>{lang === "de" ? "Zentrale Personenprofile aus allen Akten." : "Central person profiles from all case files."}</p>
-              </div>
-              <div className="admin-count">{persons.length} {t("linkedPersons")}</div>
-            </div>
-            <div className="person-database">
-              {persons.map(person => (
-                <article className="record-card" key={person.id}>
-                  <b>{person.name}</b>
-                  <span>{person.alias || "-"} · {labelValue(person.status, lang)} · {labelValue(person.riskLevel, lang)}</span>
-                  <p>{person.notes || "-"}</p>
-                  <small>{t("connectedCases")}: {(person.caseNumbers || []).join(", ") || "-"}</small>
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
-
 
         {active === "personal" && (
           <section className="admin-panel">
             <div className="admin-head">
               <div>
-                <span className="eyebrow">{t("intelligence")}</span>
-                <h2>{t("personsDatabase") || "Personendatenbank"}</h2>
-                <p>{lang === "de" ? "Zentrale Personenprofile aus allen Akten." : "Central person profiles from all case files."}</p>
+                <span className="eyebrow">Intelligence</span>
+                <h2>Personendatenbank</h2>
+                <p>Zentrale Personenprofile aus allen Akten.</p>
               </div>
-              <div className="admin-count">{persons.length} {t("linkedPersons")}</div>
+              <div className="admin-count">{persons.length} Personen</div>
             </div>
 
             <div className="person-register-grid">
@@ -1985,16 +1969,16 @@ function Dashboard({ user, profile }) {
                   </div>
                   <div>
                     <b>{person.name}</b>
-                    <span>{person.alias || "-"} · {labelValue(person.status, lang)}</span>
-                    <p>{labelValue(person.riskLevel, lang)} · {(person.caseNumbers || []).length} {t("connectedCases")}</p>
+                    <span>{person.alias || "-"} · {person.status || "UNKNOWN"}</span>
+                    <p>{person.riskLevel || "STANDARD"} · {(person.caseNumbers || []).length} verbundene Akten</p>
                     <div className="mini-flags">
-                      {person.flags?.armed && <em>{t("armed")}</em>}
-                      {person.flags?.dangerous && <em>{t("dangerous")}</em>}
-                      {person.flags?.underSurveillance && <em>{t("underSurveillance")}</em>}
+                      {person.flags?.armed && <em>Bewaffnet</em>}
+                      {person.flags?.dangerous && <em>Gefährlich</em>}
+                      {person.flags?.underSurveillance && <em>Unter Beobachtung</em>}
                     </div>
                   </div>
                 </article>
-              )) : <p className="muted">{t("noPersons") || "Keine Personenprofile vorhanden"}</p>}
+              )) : <p className="muted">Keine Personenprofile vorhanden. Erstelle zuerst in einer Akte im Intelligence-Tab eine Person.</p>}
             </div>
           </section>
         )}
@@ -2006,8 +1990,6 @@ function Dashboard({ user, profile }) {
             profile={profile}
             ranks={ranks}
             onClose={() => setSelectedPersonId(null)}
-            t={t}
-            lang={lang}
           />
         )}
 
