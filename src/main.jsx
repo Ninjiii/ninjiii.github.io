@@ -47,9 +47,9 @@ import { exportCasePdf } from "./lib/pdf";
 import "./styles/app.css";
 
 const CASE_TYPES = ["Fallakte", "Gangakte", "Ermittlungsakte", "Observationsakte", "Einsatzakte"];
-const STATUSES = ["Offen", "In Bearbeitung", "Unter Beobachtung", "Haftbefehl beantragt", "Abgeschlossen", "Archiviert"];
-const PRIORITIES = ["Niedrig", "Normal", "Hoch", "Kritisch"];
-const CLASSIFICATIONS = ["Intern", "Vertraulich", "Streng vertraulich", "Nur Führungsebene"];
+const STATUSES = ["OPEN", "ACTIVE", "UNDER SURVEILLANCE", "WARRANT ISSUED", "SUSPENDED", "CLOSED", "ARCHIVED"];
+const PRIORITIES = ["LOW", "STANDARD", "HIGH", "CRITICAL"];
+const CLASSIFICATIONS = ["UNCLASSIFIED", "CONFIDENTIAL", "SECRET", "TOP SECRET"];
 
 function caseNumber(type) {
   const prefix = {
@@ -58,19 +58,35 @@ function caseNumber(type) {
     Ermittlungsakte: "FIB-INV",
     Observationsakte: "FIB-OBS",
     Einsatzakte: "FIB-OPS"
-  }[type] || "FIB-AKTE";
+  }[type] || "FIB-CASE";
   return `${prefix}-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+}
+
+function evidenceId() {
+  return `EV-${new Date().getFullYear()}-${String(Date.now()).slice(-7)}`;
+}
+
+function auditEntry(text, user) {
+  return {
+    text,
+    date: new Date().toLocaleString("de-DE"),
+    by: user?.email || "system"
+  };
 }
 
 function emptyCase(user) {
   return {
     title: "",
     type: "Fallakte",
-    status: "Offen",
-    priority: "Normal",
-    classification: "Intern",
+    status: "OPEN",
+    priority: "STANDARD",
+    classification: "CONFIDENTIAL",
+    leadAgent: user?.email || "",
+    leadAgentUid: user?.uid || "",
     assignee: user?.email || "",
     assigneeUid: user?.uid || "",
+    supervisor: "", 
+    supervisorUid: "",
     location: "",
     department: "Major Crimes Division",
     description: "",
@@ -277,7 +293,18 @@ function CaseForm({ user, users, onCreate }) {
     setForm(current => ({
       ...current,
       assigneeUid: uid,
-      assignee: selected?.email || current.assignee
+      assignee: selected?.email || current.assignee,
+      leadAgentUid: uid,
+      leadAgent: selected?.email || current.leadAgent
+    }));
+  }
+
+  function selectSupervisor(uid) {
+    const selected = users.find(u => u.uid === uid);
+    setForm(current => ({
+      ...current,
+      supervisorUid: uid,
+      supervisor: selected?.email || ""
     }));
   }
 
@@ -291,6 +318,11 @@ function CaseForm({ user, users, onCreate }) {
       status: form.status,
       priority: form.priority,
       classification: form.classification,
+      leadAgent: form.leadAgent,
+      leadAgentUid: form.leadAgentUid,
+      assignedAgents: form.assigneeUid ? [{ uid: form.assigneeUid, email: form.assignee, role: "Lead Agent" }] : [],
+      supervisor: form.supervisor,
+      supervisorUid: form.supervisorUid,
       assignee: form.assignee,
       assigneeUid: form.assigneeUid,
       location: form.location,
@@ -299,11 +331,20 @@ function CaseForm({ user, users, onCreate }) {
       objective: form.objective,
       tags: form.tagsInput.split(",").map(t => t.trim()).filter(Boolean),
       suspects: form.suspectName ? [{ name: form.suspectName, info: form.suspectInfo, status: "Relevant" }] : [],
-      evidence: form.evidenceName ? [{ name: form.evidenceName, info: form.evidenceInfo, type: "Beweisstück", addedAt: new Date().toISOString() }] : [],
+      evidence: form.evidenceName ? [{
+        id: evidenceId(),
+        name: form.evidenceName,
+        info: form.evidenceInfo,
+        type: "Physical / Digital Evidence",
+        source: form.location || "Unknown",
+        status: "SECURED",
+        addedAt: new Date().toISOString(),
+        chain: [auditEntry("Evidence secured and entered into registry", user)]
+      }] : [],
       notes: form.noteInput ? [{ text: form.noteInput, date: new Date().toLocaleString("de-DE"), by: user.email }] : [],
       appointments: form.appointmentTitle ? [{ title: form.appointmentTitle, date: form.appointmentDate }] : [],
       logbook: form.logbookInput ? [{ text: form.logbookInput, date: new Date().toLocaleString("de-DE"), by: user.email }] : [],
-      activity: [{ text: "Akte erstellt", date: new Date().toLocaleString("de-DE"), by: user.email }],
+      activity: [auditEntry("Case file created and entered into Federal Case Records", user)],
       createdBy: user.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -329,7 +370,11 @@ function CaseForm({ user, users, onCreate }) {
         <select value={form.status} onChange={e => set("status", e.target.value)}>{STATUSES.map(x => <option key={x}>{x}</option>)}</select>
         <select value={form.priority} onChange={e => set("priority", e.target.value)}>{PRIORITIES.map(x => <option key={x}>{x}</option>)}</select>
         <select value={form.assigneeUid} onChange={e => selectAssignee(e.target.value)}>
-          <option value={user.uid}>Mir selbst zuweisen</option>
+          <option value={user.uid}>Lead Agent: mir selbst zuweisen</option>
+          {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email} — {u.role}</option>)}
+        </select>
+        <select value={form.supervisorUid} onChange={e => selectSupervisor(e.target.value)}>
+          <option value="">Supervising Officer auswählen...</option>
           {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email} — {u.role}</option>)}
         </select>
         <input value={form.location} onChange={e => set("location", e.target.value)} placeholder="Ort / Einsatzgebiet" />
@@ -384,12 +429,17 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
   const [note, setNote] = useState("");
   const [log, setLog] = useState("");
   const [person, setPerson] = useState({ name: "", info: "" });
-  const [evidence, setEvidence] = useState({ name: "", info: "" });
+  const [evidence, setEvidence] = useState({ name: "", info: "", source: "", type: "Physical / Digital Evidence", status: "SECURED" });
   const [appointment, setAppointment] = useState({ title: "", date: "" });
   const [uploading, setUploading] = useState(false);
   const [editCore, setEditCore] = useState(false);
   const [coreDraft, setCoreDraft] = useState(null);
   const [caseError, setCaseError] = useState("");
+  const [assignmentDraft, setAssignmentDraft] = useState({
+    leadAgentUid: selected?.leadAgentUid || selected?.assigneeUid || "",
+    supervisorUid: selected?.supervisorUid || "",
+    assignedUid: ""
+  });
 
   useEffect(() => {
     if (!selected) return;
@@ -424,7 +474,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
         ...data,
         activity: [
           ...(selected.activity || []),
-          { text: activityText, date: new Date().toLocaleString("de-DE"), by: currentUser.email }
+          auditEntry(activityText, currentUser)
         ],
         updatedAt: serverTimestamp()
       });
@@ -484,8 +534,14 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
 
   async function addEvidence() {
     if (!mayEdit || !evidence.name.trim()) return;
-    await patchCase({ evidence: [...(selected.evidence || []), { ...evidence, type: "Beweisstück", addedAt: new Date().toISOString() }] }, `Beweis hinzugefügt: ${evidence.name}`);
-    setEvidence({ name: "", info: "" });
+    const record = {
+      id: evidenceId(),
+      ...evidence,
+      addedAt: new Date().toISOString(),
+      chain: [auditEntry("Evidence entered into chain of custody", currentUser)]
+    };
+    await patchCase({ evidence: [...(selected.evidence || []), record] }, `Evidence registered: ${evidence.name}`);
+    setEvidence({ name: "", info: "", source: "", type: "Physical / Digital Evidence", status: "SECURED" });
   }
 
   async function addAppointment() {
@@ -497,7 +553,34 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
   async function assignTo(uid) {
     if (!mayAssign) return;
     const target = users.find(u => u.uid === uid);
-    await patchCase({ assigneeUid: uid, assignee: target?.email || "" }, `Akte zugewiesen an ${target?.displayName || target?.email || uid}`);
+    await patchCase({
+      assigneeUid: uid,
+      assignee: target?.email || "",
+      leadAgentUid: uid,
+      leadAgent: target?.email || ""
+    }, `Lead Agent assigned: ${target?.displayName || target?.email || uid}`);
+  }
+
+  async function saveAssignmentStructure() {
+    if (!mayAssign) return;
+
+    const lead = users.find(u => u.uid === assignmentDraft.leadAgentUid);
+    const supervisor = users.find(u => u.uid === assignmentDraft.supervisorUid);
+    const assigned = users.find(u => u.uid === assignmentDraft.assignedUid);
+    const existingAssigned = selected.assignedAgents || [];
+    const nextAssigned = assigned
+      ? [...existingAssigned.filter(a => a.uid !== assigned.uid), { uid: assigned.uid, email: assigned.email, role: "Assigned Agent" }]
+      : existingAssigned;
+
+    await patchCase({
+      leadAgentUid: lead?.uid || "",
+      leadAgent: lead?.email || "",
+      assigneeUid: lead?.uid || "",
+      assignee: lead?.email || "",
+      supervisorUid: supervisor?.uid || "",
+      supervisor: supervisor?.email || "",
+      assignedAgents: nextAssigned
+    }, "Case assignment structure updated");
   }
 
   async function uploadFile(file) {
@@ -522,6 +605,7 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
 
   const tabs = [
     ["overview", "Übersicht"],
+    ["assignments", "Assignments"],
     ["persons", "Personen"],
     ["evidence", "Evidence Registry"],
     ["documents", "Document Vault"],
@@ -545,6 +629,20 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
         </div>
         <button className="ghost" onClick={onClose}>Schließen</button>
       </header>
+
+      <div className={`classification-banner classification-${(selected.classification || "CONFIDENTIAL").toLowerCase().replaceAll(" ", "-")}`}>
+        <strong>{selected.classification || "CONFIDENTIAL"}</strong>
+        <span>FEDERAL CASE RECORD • {selected.caseNo || "NO CASE NUMBER"} • {selected.status || "OPEN"}</span>
+      </div>
+
+      <div className="federal-case-header">
+        <div><b>CASE NO</b><span>{selected.caseNo || "-"}</span></div>
+        <div><b>CLASSIFICATION</b><span>{selected.classification || "-"}</span></div>
+        <div><b>STATUS</b><span>{selected.status || "-"}</span></div>
+        <div><b>PRIORITY</b><span>{selected.priority || "-"}</span></div>
+        <div><b>LEAD AGENT</b><span>{selected.leadAgent || selected.assignee || "-"}</span></div>
+        <div><b>SUPERVISOR</b><span>{selected.supervisor || "-"}</span></div>
+      </div>
 
       <div className="case-toolbar">
         {mayExport && <button onClick={() => exportCasePdf(selected)}>PDF Export</button>}
@@ -658,6 +756,40 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
         </div>
       )}
 
+      {tab === "assignments" && (
+        <div className="detail-grid">
+          <section className="module-card span-2">
+            <h3>Case Assignment Structure</h3>
+            <div className="assignment-grid">
+              <div><b>Lead Agent</b><span>{selected.leadAgent || selected.assignee || "-"}</span></div>
+              <div><b>Supervising Officer</b><span>{selected.supervisor || "-"}</span></div>
+              <div><b>Assigned Agents</b><span>{(selected.assignedAgents || []).map(a => a.email).join(", ") || "-"}</span></div>
+            </div>
+
+            {mayAssign && (
+              <div className="assignment-editor">
+                <select value={assignmentDraft.leadAgentUid} onChange={e => setAssignmentDraft({ ...assignmentDraft, leadAgentUid: e.target.value })}>
+                  <option value="">Lead Agent auswählen...</option>
+                  {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email} — {u.role}</option>)}
+                </select>
+
+                <select value={assignmentDraft.supervisorUid} onChange={e => setAssignmentDraft({ ...assignmentDraft, supervisorUid: e.target.value })}>
+                  <option value="">Supervising Officer auswählen...</option>
+                  {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email} — {u.role}</option>)}
+                </select>
+
+                <select value={assignmentDraft.assignedUid} onChange={e => setAssignmentDraft({ ...assignmentDraft, assignedUid: e.target.value })}>
+                  <option value="">Assigned Agent hinzufügen...</option>
+                  {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email} — {u.role}</option>)}
+                </select>
+
+                <button onClick={saveAssignmentStructure}>Assignment speichern</button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
       {tab === "persons" && (
         <div className="detail-grid">
           <ModuleList title="Subjects / Persons of Interest" items={selected.suspects || []} empty="Keine Personen hinterlegt." render={(p, i) => (
@@ -675,13 +807,34 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
       {tab === "evidence" && (
         <div className="detail-grid">
           <ModuleList title="Evidence Registry" items={selected.evidence || []} empty="Keine Evidence Registry hinterlegt." render={(ev, i) => (
-            <article key={i} className="record-card"><b>{ev.name}</b><span>{ev.type}</span><p>{ev.info}</p></article>
+            <article key={i} className="record-card evidence-record">
+              <b>{ev.id || "NO-EVIDENCE-ID"} · {ev.name}</b>
+              <span>{ev.type} · {ev.status || "SECURED"} · Source: {ev.source || "Unknown"}</span>
+              <p>{ev.info}</p>
+              <small>Chain: {(ev.chain || []).map(c => `${c.date} ${c.by}: ${c.text}`).join(" | ") || "No chain records"}</small>
+            </article>
           )} />
           {mayEdit && <section className="module-card">
             <h3>Beweis hinzufügen</h3>
-            <input value={evidence.name} onChange={e => setEvidence({ ...evidence, name: e.target.value })} placeholder="Beweisstück" />
-            <textarea value={evidence.info} onChange={e => setEvidence({ ...evidence, info: e.target.value })} placeholder="Beschreibung / Fundort / Relevanz" />
-            <button onClick={addEvidence}>Beweis speichern</button>
+            <input value={evidence.name} onChange={e => setEvidence({ ...evidence, name: e.target.value })} placeholder="Evidence name / item" />
+            <div className="grid-2">
+              <select value={evidence.type} onChange={e => setEvidence({ ...evidence, type: e.target.value })}>
+                <option>Physical / Digital Evidence</option>
+                <option>Witness Statement</option>
+                <option>Surveillance Record</option>
+                <option>Financial Record</option>
+                <option>Forensic Report</option>
+              </select>
+              <select value={evidence.status} onChange={e => setEvidence({ ...evidence, status: e.target.value })}>
+                <option>SECURED</option>
+                <option>IN ANALYSIS</option>
+                <option>VERIFIED</option>
+                <option>ARCHIVED</option>
+              </select>
+            </div>
+            <input value={evidence.source} onChange={e => setEvidence({ ...evidence, source: e.target.value })} placeholder="Source / origin / location" />
+            <textarea value={evidence.info} onChange={e => setEvidence({ ...evidence, info: e.target.value })} placeholder="Description / relevance / chain notes" />
+            <button onClick={addEvidence}>Evidence registrieren</button>
           </section>}
         </div>
       )}

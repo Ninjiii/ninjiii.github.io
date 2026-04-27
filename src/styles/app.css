@@ -919,3 +919,125 @@ h1, h2, h3, p { margin-top: 0; }
   .case-modal-window .details { padding: 44px 14px 14px; }
   .module-heading-row { align-items: stretch; flex-direction: column; }
 }
+
+
+/* V12 Real Federal Case System */
+.classification-banner {
+  margin: 10px 0 12px;
+  border: 1px solid rgba(199,164,91,.35);
+  background: rgba(199,164,91,.10);
+  color: #f1d998;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 12px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.classification-banner strong {
+  font-size: 13px;
+}
+
+.classification-unclassified {
+  border-color: rgba(123,212,154,.38);
+  background: rgba(123,212,154,.08);
+  color: #caffdc;
+}
+
+.classification-confidential {
+  border-color: rgba(107,152,255,.40);
+  background: rgba(107,152,255,.09);
+  color: #dbe7ff;
+}
+
+.classification-secret {
+  border-color: rgba(239,195,109,.44);
+  background: rgba(239,195,109,.10);
+  color: #ffe3a5;
+}
+
+.classification-top-secret {
+  border-color: rgba(216,92,104,.46);
+  background: rgba(216,92,104,.12);
+  color: #ffc2c8;
+}
+
+.federal-case-header {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+  margin: 10px 0 12px;
+}
+
+.federal-case-header div,
+.assignment-grid div {
+  background: rgba(10,16,26,.94);
+  padding: 10px;
+  min-height: 62px;
+}
+
+.federal-case-header b,
+.assignment-grid b {
+  display: block;
+  color: #e6cb89;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  margin-bottom: 5px;
+}
+
+.federal-case-header span,
+.assignment-grid span {
+  color: var(--ink);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+.assignment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+.assignment-editor {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.evidence-record small {
+  color: var(--dim);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1200px) {
+  .federal-case-header {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .assignment-editor {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .federal-case-header,
+  .assignment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .classification-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -172,3 +172,15 @@ Einbau:
 - Command-Center-Stil mit Scanline/Grid-Effekt
 - Tabellen und Module wie interne Behördenakten
 - Labels mehr Richtung Case Records / Evidence Registry / Operations Log
+
+
+## V12 Real Federal Case System
+
+- echter Federal Case Header mit Case No, Classification, Status, Priority, Lead Agent und Supervisor
+- Classification Banner: UNCLASSIFIED, CONFIDENTIAL, SECRET, TOP SECRET
+- realistischere Statuswerte: OPEN, ACTIVE, UNDER SURVEILLANCE, WARRANT ISSUED, SUSPENDED, CLOSED, ARCHIVED
+- Lead Agent, Assigned Agents und Supervising Officer
+- eigener Assignments-Tab
+- Evidence Registry mit Evidence-ID, Typ, Quelle, Status und Chain-of-Custody
+- Audit Trail wird über zentrale Audit-Einträge erweitert
+- PDF-Export enthält Lead/Supervisor/Assigned Agents und Evidence IDs

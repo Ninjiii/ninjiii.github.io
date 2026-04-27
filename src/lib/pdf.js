@@ -47,7 +47,9 @@ export function exportCasePdf(caseFile) {
   addLine("Status", caseFile.status);
   addLine("Priorität", caseFile.priority);
   addLine("Einstufung", caseFile.classification);
-  addLine("Sachbearbeiter", caseFile.assignee);
+  addLine("Lead Agent", caseFile.leadAgent || caseFile.assignee);
+  addLine("Supervising Officer", caseFile.supervisor);
+  addLine("Assigned Agents", (caseFile.assignedAgents || []).map(a => a.email).join(", "));
   addLine("Ort", caseFile.location);
   addLine("Abteilung", caseFile.department);
   addLine("Tags", (caseFile.tags || []).join(", "));
@@ -60,7 +62,7 @@ export function exportCasePdf(caseFile) {
   addLine("Einträge", (caseFile.suspects || []).map(p => `- ${p.name}: ${p.info}`).join("\n"));
 
   addSection("Beweise");
-  addLine("Einträge", (caseFile.evidence || []).map(e => `- ${e.name}: ${e.info}`).join("\n"));
+  addLine("Einträge", (caseFile.evidence || []).map(e => `- ${e.id || "NO-ID"} ${e.name} [${e.status || "SECURED"}]: ${e.info}`).join("\n"));
 
   addSection("Notizen");
   addLine("Einträge", (caseFile.notes || []).map(n => `- ${n.date} ${n.by || ""}: ${n.text}`).join("\n"));
