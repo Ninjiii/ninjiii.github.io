@@ -2,6 +2,8 @@
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
+Made by Nino Stramonte
+
 ## Funktionen V1
 
 - Login / Registrierung per E-Mail und Passwort
