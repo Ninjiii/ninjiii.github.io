@@ -1459,7 +1459,6 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 function AdminPanel({ currentUser, profile, ranks }) {
   const [users, setUsers] = useState([]);
   const [persons, setPersons] = useState([]);
-  const [selectedPersonId, setSelectedPersonId] = useState(null);
   const [status, setStatus] = useState("");
   const [newUser, setNewUser] = useState({ email: "", password: "", displayName: "", role: ranks[0]?.name || "Anwärter" });
   const [rankName, setRankName] = useState("");
@@ -1839,6 +1838,7 @@ function Dashboard({ user, profile }) {
   const [cases, setCases] = useState([]);
   const [users, setUsers] = useState([]);
   const [persons, setPersons] = useState([]);
+  const [selectedPersonId, setSelectedPersonId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("Alle");
