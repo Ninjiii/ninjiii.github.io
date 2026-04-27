@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -234,3 +234,11 @@ Einbau:
 - Intelligence-Inhalt wird garantiert direkt vor dem Investigation-Tab gerendert.
 - Fallback für `persons` eingebaut, damit die Akte nicht crasht, wenn noch keine Personen geladen sind.
 - Firestore Rules prüfen weiterhin `persons`.
+
+
+## V16.2 Akten-Öffnen Fix
+
+- Fehler behoben, bei dem Akten wegen fehlender `t(...)` / `labelValue(...)` Funktionen nicht mehr geöffnet haben.
+- CaseDetails hat jetzt lokale Fallback-Übersetzungen.
+- `persons` wird sicher an CaseDetails übergeben.
+- Intelligence-Tab bleibt enthalten.
