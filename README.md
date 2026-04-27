@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -303,3 +303,19 @@ Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, dami
 - `networkSelection` wurde jetzt wirklich direkt in `CaseDetails` eingefügt.
 - `relationshipDraft` wurde dort ebenfalls gesetzt.
 - ZIP wurde vor Ausgabe auf diese States geprüft.
+
+
+## V19 Personalregister PRO
+
+- Personalregister wurde zu echten Personenprofilen ausgebaut.
+- Personenkarten mit Mugshot, Status, Risiko und Warnhinweisen.
+- Profilfenster mit:
+  - Mugshot Upload
+  - Name / Alias
+  - Personenstatus
+  - Risikostufe
+  - Intelligence Notes
+  - Warnflags: bewaffnet, gefährlich, unter Beobachtung, bekannter Kontakt
+  - verknüpfte Akten
+  - Beziehungen
+- Storage Rules wurden um `/persons/{personId}/...` für Mugshots erweitert.
