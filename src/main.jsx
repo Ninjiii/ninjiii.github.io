@@ -498,6 +498,13 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     assignedUid: ""
   });
   const [evidenceViewer, setEvidenceViewer] = useState(null);
+  const [networkSelection, setNetworkSelection] = useState(null);
+  const [relationshipDraft, setRelationshipDraft] = useState({
+    fromPersonId: "",
+    toPersonId: "",
+    type: "ASSOCIATE",
+    note: ""
+  });
   const [linkedCaseInput, setLinkedCaseInput] = useState("");
   const [milestone, setMilestone] = useState({ title: "", status: "INTAKE", note: "" });
   const [personDraft, setPersonDraft] = useState({
@@ -638,6 +645,40 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     }, `Existing person linked to case: ${target.name}`);
 
     setPersonToLink("");
+  }
+
+  async function addRelationship() {
+    if (!mayEdit || !relationshipDraft.fromPersonId || !relationshipDraft.toPersonId) return;
+    if (relationshipDraft.fromPersonId === relationshipDraft.toPersonId) return;
+
+    const personRefs = Array.isArray(selected.personRefs) ? selected.personRefs : [];
+    const fromPerson = personRefs.find(p => p.id === relationshipDraft.fromPersonId);
+    const toPerson = personRefs.find(p => p.id === relationshipDraft.toPersonId);
+
+    if (!fromPerson || !toPerson) {
+      setCaseError("Beziehung konnte nicht erstellt werden: Personen fehlen in dieser Akte.");
+      return;
+    }
+
+    const relation = {
+      id: `REL-${String(Date.now()).slice(-7)}`,
+      fromPersonId: fromPerson.id,
+      fromName: fromPerson.name,
+      toPersonId: toPerson.id,
+      toName: toPerson.name,
+      type: relationshipDraft.type,
+      note: relationshipDraft.note,
+      caseId: selected.id,
+      caseNo: selected.caseNo || selected.id,
+      createdAt: new Date().toLocaleString("de-DE"),
+      by: currentUser.email
+    };
+
+    await patchCase({
+      relationships: [...(selected.relationships || []), relation]
+    }, `Relationship added: ${fromPerson.name} -> ${toPerson.name}`);
+
+    setRelationshipDraft({ fromPersonId: "", toPersonId: "", type: "ASSOCIATE", note: "" });
   }
 
   async function addLinkedCase() {
