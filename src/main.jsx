@@ -231,7 +231,12 @@ function CaseDetails({ selected, profile, ranks, onClose }) {
 
   if (!selected) return null;
 
+  const mayEdit = can(profile.role, "edit", ranks);
+  const mayExport = can(profile.role, "export", ranks);
+  const mayDelete = can(profile.role, "delete", ranks);
+
   async function addNote() {
+    if (!mayEdit) return;
     if (!note.trim()) return;
     await updateDoc(doc(db, "cases", selected.id), {
       notes: [...(selected.notes || []), { text: note, date: new Date().toLocaleString("de-DE") }],
@@ -241,6 +246,7 @@ function CaseDetails({ selected, profile, ranks, onClose }) {
   }
 
   async function addLog() {
+    if (!mayEdit) return;
     if (!log.trim()) return;
     await updateDoc(doc(db, "cases", selected.id), {
       logbook: [...(selected.logbook || []), { text: log, date: new Date().toLocaleString("de-DE") }],
@@ -250,6 +256,7 @@ function CaseDetails({ selected, profile, ranks, onClose }) {
   }
 
   async function addAppointment() {
+    if (!mayEdit) return;
     if (!appointmentTitle.trim()) return;
     await updateDoc(doc(db, "cases", selected.id), {
       appointments: [...(selected.appointments || []), { title: appointmentTitle, date: appointmentDate }],
@@ -260,6 +267,7 @@ function CaseDetails({ selected, profile, ranks, onClose }) {
   }
 
   async function uploadFile(file) {
+    if (!mayEdit) return;
     if (!file) return;
     setUploading(true);
     const path = `case-files/${selected.id}/${Date.now()}-${file.name}`;
@@ -274,6 +282,7 @@ function CaseDetails({ selected, profile, ranks, onClose }) {
   }
 
   async function removeCase() {
+    if (!mayDelete) return;
     if (!confirm("Akte wirklich löschen?")) return;
     await deleteDoc(doc(db, "cases", selected.id));
     onClose();
@@ -298,41 +307,55 @@ function CaseDetails({ selected, profile, ranks, onClose }) {
       <p>{selected.description}</p>
 
       <div className="actions">
-        {can(profile.role, "export", ranks) && <button onClick={() => exportCasePdf(selected)}>PDF herunterladen</button>}
-        {can(profile.role, "delete", ranks) && <button className="danger" onClick={removeCase}>Löschen</button>}
+        {mayExport && <button onClick={() => exportCasePdf(selected)}>PDF herunterladen</button>}
+        {mayDelete && <button className="danger" onClick={removeCase}>Löschen</button>}
       </div>
 
       <div className="panel">
         <h3>Dokumente</h3>
-        <label className="upload">
-          <Upload size={18} /> {uploading ? "Upload läuft..." : "Dokument hochladen"}
-          <input type="file" hidden onChange={e => uploadFile(e.target.files[0])} />
-        </label>
+        {mayEdit && (
+          <label className="upload">
+            <Upload size={18} /> {uploading ? "Upload läuft..." : "Dokument hochladen"}
+            <input type="file" hidden onChange={e => uploadFile(e.target.files[0])} />
+          </label>
+        )}
         {(selected.documents || []).map((d, i) => <a key={i} href={d.url} target="_blank">{d.name}</a>)}
       </div>
 
       <div className="panel">
         <h3>Notizen</h3>
         {(selected.notes || []).map((n, i) => <p key={i}><b>{n.date}</b><br />{n.text}</p>)}
-        <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Neue Notiz" />
-        <button onClick={addNote}>Notiz hinzufügen</button>
+        {mayEdit && (
+          <>
+            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Neue Notiz" />
+            <button onClick={addNote}>Notiz hinzufügen</button>
+          </>
+        )}
       </div>
 
       <div className="panel">
         <h3>Termine</h3>
         {(selected.appointments || []).map((a, i) => <p key={i}><b>{a.date}</b><br />{a.title}</p>)}
-        <div className="grid-2">
-          <input value={appointmentTitle} onChange={e => setAppointmentTitle(e.target.value)} placeholder="Termin" />
-          <input value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} type="datetime-local" />
-        </div>
-        <button onClick={addAppointment}>Termin speichern</button>
+        {mayEdit && (
+          <>
+            <div className="grid-2">
+              <input value={appointmentTitle} onChange={e => setAppointmentTitle(e.target.value)} placeholder="Termin" />
+              <input value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} type="datetime-local" />
+            </div>
+            <button onClick={addAppointment}>Termin speichern</button>
+          </>
+        )}
       </div>
 
       <div className="panel">
         <h3>Einsatztagebuch</h3>
         {(selected.logbook || []).map((l, i) => <p key={i}><b>{l.date}</b><br />{l.text}</p>)}
-        <textarea value={log} onChange={e => setLog(e.target.value)} placeholder="Neuer ETB-Eintrag" />
-        <button onClick={addLog}>Eintrag speichern</button>
+        {mayEdit && (
+          <>
+            <textarea value={log} onChange={e => setLog(e.target.value)} placeholder="Neuer ETB-Eintrag" />
+            <button onClick={addLog}>Eintrag speichern</button>
+          </>
+        )}
       </div>
     </section>
   );
@@ -385,6 +408,10 @@ function AdminPanel({ currentUser, profile, ranks }) {
 
   async function updateRole(userId, role) {
     setStatus("");
+    if (role === "Administrator" && profile.role !== "Administrator") {
+      setStatus("Nur Administratoren können den Administrator-Rang vergeben.");
+      return;
+    }
     try {
       await updateDoc(doc(db, "users", userId), {
         role,
@@ -432,6 +459,11 @@ function AdminPanel({ currentUser, profile, ranks }) {
 
     if (!can(profile.role, "createUsers", ranks)) {
       setStatus("Du hast keine Berechtigung, Accounts anzulegen.");
+      return;
+    }
+
+    if (newUser.role === "Administrator" && profile.role !== "Administrator") {
+      setStatus("Nur Administratoren können Administrator-Accounts erstellen.");
       return;
     }
 
@@ -588,7 +620,9 @@ function AdminPanel({ currentUser, profile, ranks }) {
               value={newUser.role}
               onChange={e => setNewUser(current => ({ ...current, role: e.target.value }))}
             >
-              {ranks.map(rank => <option key={rank.name}>{rank.name}</option>)}
+              {ranks
+                .filter(rank => profile.role === "Administrator" || rank.name !== "Administrator")
+                .map(rank => <option key={rank.name}>{rank.name}</option>)}
             </select>
           </div>
           <button>Account erstellen</button>
@@ -623,7 +657,9 @@ function AdminPanel({ currentUser, profile, ranks }) {
                 onChange={e => updateRole(user.id, e.target.value)}
                 disabled={user.uid === currentUser.uid}
               >
-                {ranks.map(rank => <option key={rank.name}>{rank.name}</option>)}
+                {ranks
+                  .filter(rank => profile.role === "Administrator" || rank.name !== "Administrator")
+                  .map(rank => <option key={rank.name}>{rank.name}</option>)}
               </select>
 
               <span className={user.suspended ? "status-bad" : "status-good"}>
@@ -688,6 +724,8 @@ function AdminPanel({ currentUser, profile, ranks }) {
 
 function Dashboard({ user, profile }) {
   const ranks = useRanks();
+  const mayReadCases = can(profile.role, "read", ranks);
+  const mayCreateCases = can(profile.role, "create", ranks);
   const [active, setActive] = useState("akten");
   const [cases, setCases] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -727,7 +765,7 @@ function Dashboard({ user, profile }) {
           <div className="user-pill">{user.email}</div>
         </header>
 
-        {active === "akten" && (
+        {active === "akten" && mayReadCases && (
           <>
             <section className="stats">
               <div><strong>{stats.total}</strong><span>Gesamtakten</span></div>
@@ -737,7 +775,7 @@ function Dashboard({ user, profile }) {
 
             <section className="toolbar">
               <div className="search"><Search size={18} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Akten durchsuchen..." /></div>
-              {can(profile.role, "create", ranks) && <button onClick={() => setShowForm(!showForm)}><Plus size={18} /> Neue Akte</button>}
+              {mayCreateCases && <button onClick={() => setShowForm(!showForm)}><Plus size={18} /> Neue Akte</button>}
             </section>
 
             {showForm && <CaseForm user={user} onCreate={() => setShowForm(false)} />}
@@ -757,6 +795,13 @@ function Dashboard({ user, profile }) {
               ))}
             </section>
           </>
+        )}
+
+        {active === "akten" && !mayReadCases && (
+          <section className="placeholder">
+            <h2>Kein Aktenzugriff</h2>
+            <p>Dein Rang hat aktuell keine Leserechte für Akten.</p>
+          </section>
         )}
 
         {active === "admin" && <AdminPanel currentUser={user} profile={profile} ranks={ranks} />}
