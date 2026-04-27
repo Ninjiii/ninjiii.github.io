@@ -2,8 +2,6 @@
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
-Made by Nino Stramonte v2.1
-
 ## Funktionen V1
 
 - Login / Registrierung per E-Mail und Passwort
@@ -45,3 +43,12 @@ Settings > Pages > Source: GitHub Actions
 ## Wichtiger Sicherheitshinweis
 
 Die Rollen in V1 werden in Firestore vorbereitet. Für produktive Nutzung müssen die Firestore- und Storage-Rules sorgfältig gesetzt werden. Starter-Rules liegen in `firebase.rules`.
+
+
+## Neu in V2 Admin
+
+- Admin-Panel unter „Administration“
+- Userliste aus Firestore
+- Rollen per Dropdown ändern
+- Accounts sperren/entsperren
+- Gesperrte Accounts werden beim Laden automatisch ausgeloggt

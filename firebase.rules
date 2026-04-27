@@ -6,24 +6,33 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function role() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userDoc().role;
+    }
+
+    function isActive() {
+      return signedIn() && userDoc().suspended != true;
     }
 
     function isAdmin() {
-      return signedIn() && role() == "Administrator";
+      return isActive() && role() == "Administrator";
     }
 
     match /users/{userId} {
-      allow read: if signedIn();
+      allow read: if isActive();
       allow create: if signedIn() && request.auth.uid == userId;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /cases/{caseId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && role() in ["Administrator", "Direktor", "Leitung", "Ermittler", "Agent"];
-      allow update: if signedIn() && role() in ["Administrator", "Direktor", "Leitung", "Ermittler"];
+      allow read: if isActive();
+      allow create: if isActive() && role() in ["Administrator", "Direktor", "Leitung", "Ermittler", "Agent"];
+      allow update: if isActive() && role() in ["Administrator", "Direktor", "Leitung", "Ermittler"];
       allow delete: if isAdmin();
     }
   }
