@@ -133,6 +133,12 @@ export async function exportCasePdf(caseFile) {
     y += 4;
   }
 
+  addSection("Linked Cases");
+  addLine("Records", (caseFile.linkedCases || []).map(l => `- ${l.ref} (${l.addedAt || ""} ${l.by || ""})`).join("\n"));
+
+  addSection("Investigation Milestones");
+  addLine("Records", (caseFile.milestones || []).map(m => `- ${m.date} ${m.status}: ${m.title} — ${m.note || ""}`).join("\n"));
+
   addSection("Agent Notes");
   addLine("Records", (caseFile.notes || []).map(n => `- ${n.date} ${n.by || ""}: ${n.text}`).join("\\n"));
 

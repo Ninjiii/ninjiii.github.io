@@ -441,6 +441,9 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
     supervisorUid: selected?.supervisorUid || "",
     assignedUid: ""
   });
+  const [evidenceViewer, setEvidenceViewer] = useState(null);
+  const [linkedCaseInput, setLinkedCaseInput] = useState("");
+  const [milestone, setMilestone] = useState({ title: "", status: "INTAKE", note: "" });
 
   useEffect(() => {
     if (!selected) return;
@@ -513,6 +516,34 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
   async function quickUpdateField(key, value, label) {
     if (!mayEdit) return;
     await patchCase({ [key]: value }, `${label} geändert auf ${value}`);
+  }
+
+  async function addLinkedCase() {
+    if (!mayEdit || !linkedCaseInput.trim()) return;
+    const nextLinks = [
+      ...(selected.linkedCases || []),
+      {
+        ref: linkedCaseInput.trim(),
+        addedAt: new Date().toLocaleString("de-DE"),
+        by: currentUser.email
+      }
+    ];
+    await patchCase({ linkedCases: nextLinks }, `Linked case added: ${linkedCaseInput.trim()}`);
+    setLinkedCaseInput("");
+  }
+
+  async function addMilestone() {
+    if (!mayEdit || !milestone.title.trim()) return;
+    const nextMilestones = [
+      ...(selected.milestones || []),
+      {
+        ...milestone,
+        date: new Date().toLocaleString("de-DE"),
+        by: currentUser.email
+      }
+    ];
+    await patchCase({ milestones: nextMilestones }, `Investigation milestone added: ${milestone.title}`);
+    setMilestone({ title: "", status: "INTAKE", note: "" });
   }
 
   async function addNote() {
@@ -627,7 +658,9 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
 
   const tabs = [
     ["overview", "Übersicht"],
+    ["investigation", "Investigation"],
     ["assignments", "Assignments"],
+    ["links", "Linked Cases"],
     ["persons", "Personen"],
     ["evidence", "Evidence Registry"],
     ["documents", "Document Vault"],
@@ -778,6 +811,77 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
         </div>
       )}
 
+      {tab === "investigation" && (
+        <div className="detail-grid">
+          <section className="module-card span-2">
+            <h3>Investigation Flow</h3>
+            <div className="investigation-flow">
+              {[
+                { key: "INTAKE", label: "Intake" },
+                { key: "ACTIVE", label: "Active Investigation" },
+                { key: "SURVEILLANCE", label: "Surveillance" },
+                { key: "EVIDENCE", label: "Evidence Secured" },
+                { key: "WARRANT", label: "Warrant / Action" },
+                { key: "CLOSED", label: "Closed" }
+              ].map(step => {
+                const hit = (selected.milestones || []).some(m => m.status === step.key) || selected.status?.includes(step.key);
+                return (
+                  <div key={step.key} className={hit ? "flow-step active" : "flow-step"}>
+                    <b>{step.key}</b>
+                    <span>{step.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <ModuleList title="Investigation Milestones" items={selected.milestones || []} empty="No investigation milestones." render={(m, i) => (
+            <article key={i} className="timeline-item">
+              <b>{m.status} · {m.title}</b>
+              <span>{m.date} · {m.by}</span>
+              <p>{m.note}</p>
+            </article>
+          )} />
+
+          {mayEdit && (
+            <section className="module-card">
+              <h3>Add Milestone</h3>
+              <input value={milestone.title} onChange={e => setMilestone({ ...milestone, title: e.target.value })} placeholder="Milestone title" />
+              <select value={milestone.status} onChange={e => setMilestone({ ...milestone, status: e.target.value })}>
+                <option>INTAKE</option>
+                <option>ACTIVE</option>
+                <option>SURVEILLANCE</option>
+                <option>EVIDENCE</option>
+                <option>WARRANT</option>
+                <option>CLOSED</option>
+              </select>
+              <textarea value={milestone.note} onChange={e => setMilestone({ ...milestone, note: e.target.value })} placeholder="Operational note" />
+              <button onClick={addMilestone}>Milestone speichern</button>
+            </section>
+          )}
+        </div>
+      )}
+
+      {tab === "links" && (
+        <div className="detail-grid">
+          <ModuleList title="Linked Federal Case Files" items={selected.linkedCases || []} empty="No linked cases." render={(link, i) => (
+            <article key={i} className="record-card">
+              <b>{link.ref}</b>
+              <span>{link.addedAt} · {link.by}</span>
+              <p>Linked case reference / case number</p>
+            </article>
+          )} />
+
+          {mayEdit && (
+            <section className="module-card">
+              <h3>Link Case</h3>
+              <input value={linkedCaseInput} onChange={e => setLinkedCaseInput(e.target.value)} placeholder="Case No. or title, e.g. FIB-INV-2026-123456" />
+              <button onClick={addLinkedCase}>Case verknüpfen</button>
+            </section>
+          )}
+        </div>
+      )}
+
       {tab === "assignments" && (
         <div className="detail-grid">
           <section className="module-card span-2">
@@ -833,9 +937,10 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
               <b>{ev.id || "NO-EVIDENCE-ID"} · {ev.name}</b>
               <span>{ev.type} · {ev.status || "SECURED"} · Source: {ev.source || "Unknown"}</span>
               {ev.image?.url && (
-                <a href={ev.image.url} target="_blank" className="evidence-image-link">
+                <button className="evidence-image-button" onClick={() => setEvidenceViewer(ev)}>
                   <img src={ev.image.url} alt={ev.name} className="evidence-image-preview" />
-                </a>
+                  <span>Open Evidence Viewer</span>
+                </button>
               )}
               <p>{ev.info}</p>
               <small>Chain: {(ev.chain || []).map(c => `${c.date} ${c.by}: ${c.text}`).join(" | ") || "No chain records"}</small>
@@ -920,6 +1025,34 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
         <ModuleList title="Audit Trail" items={selected.activity || []} empty="Keine Aktivität." render={(a, i) => (
           <article key={i} className="timeline-item"><b>{a.date}</b><span>{a.by}</span><p>{a.text}</p></article>
         )} />
+      )}
+      {evidenceViewer && (
+        <div className="evidence-viewer-backdrop">
+          <div className="evidence-viewer">
+            <header>
+              <div>
+                <span className="eyebrow">Evidence Viewer</span>
+                <h3>{evidenceViewer.id} · {evidenceViewer.name}</h3>
+              </div>
+              <button className="ghost" onClick={() => setEvidenceViewer(null)}>Close Viewer</button>
+            </header>
+            <div className="evidence-viewer-body">
+              <img src={evidenceViewer.image?.url} alt={evidenceViewer.name} />
+              <aside>
+                <b>Evidence Metadata</b>
+                <p><span>Type</span>{evidenceViewer.type || "-"}</p>
+                <p><span>Status</span>{evidenceViewer.status || "-"}</p>
+                <p><span>Source</span>{evidenceViewer.source || "-"}</p>
+                <p><span>Uploaded</span>{evidenceViewer.image?.uploadedAt || evidenceViewer.addedAt || "-"}</p>
+                <p><span>Description</span>{evidenceViewer.info || "-"}</p>
+                <b>Chain of Custody</b>
+                {(evidenceViewer.chain || []).map((c, i) => (
+                  <p key={i}><span>{c.date}</span>{c.by}: {c.text}</p>
+                ))}
+              </aside>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

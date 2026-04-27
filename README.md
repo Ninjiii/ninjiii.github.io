@@ -193,3 +193,13 @@ Einbau:
 - Evidence-Einträge zeigen eine Bildvorschau in der Akte.
 - Klick auf das Bild öffnet die Originaldatei.
 - PDF-Export bindet Evidence-Bilder ein, soweit der Browser die Datei laden kann.
+
+
+## V14 Investigation Upgrade
+
+- Evidence Fullscreen Viewer innerhalb des Systems
+- Evidence Viewer zeigt Bild, Metadaten und Chain of Custody
+- neuer Investigation-Tab mit visuellem Ermittlungsfluss
+- Milestones für Investigation Flow
+- verknüpfte Akten / Linked Cases
+- Linked Cases und Milestones im PDF-Export
