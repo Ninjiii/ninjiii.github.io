@@ -657,17 +657,18 @@ function CaseDetails({ selected, profile, ranks, users, onClose }) {
   }
 
   const tabs = [
-    ["overview", "Übersicht"],
-    ["investigation", "Investigation"],
-    ["assignments", "Assignments"],
-    ["links", "Linked Cases"],
-    ["persons", "Personen"],
-    ["evidence", "Evidence Registry"],
-    ["documents", "Document Vault"],
-    ["notes", "Agent Notes"],
-    ["logbook", "ETB"],
-    ["timeline", "Audit Trail"]
-  ];
+  ["overview", t("overview")],
+  ["intelligence", t("intelligence")], // ← DAS IST NEU
+  ["investigation", t("investigation")],
+  ["assignments", t("assignments")],
+  ["links", t("linkedCases")],
+  ["persons", t("subjects")],
+  ["evidence", t("evidence")],
+  ["documents", t("documentVault")],
+  ["notes", t("agentNotes")],
+  ["logbook", t("operationsLog")],
+  ["timeline", t("auditTrail")]
+];
 
   return (
     <section className="details wide-details">
