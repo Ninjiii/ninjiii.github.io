@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -213,3 +213,24 @@ Einbau:
 - Sichtbare Werte werden über `labelValue()` übersetzt.
 - Zentrale Übersetzungen liegen in `LANG` und `VALUE_LABELS` in `src/main.jsx`.
 - UI-Texte für Header, Navigation, Tabs, Evidence Viewer, Admin und Case-Bereiche wurden übersetzbar gemacht.
+
+
+## V16 Intelligence System
+
+- neue zentrale Firestore Collection: `persons`
+- Personen sind eigene Datensätze und können mit mehreren Akten verknüpft werden
+- neuer Tab `Intelligence` innerhalb einer Akte
+- neue Personen erstellen und direkt mit einer Akte verknüpfen
+- bestehende Personen mit einer Akte verknüpfen
+- erste Netzwerkansicht aus Case, Personen und verknüpften Akten
+- Personalbereich zeigt zentrale Personendatenbank
+- PDF-Export enthält Intelligence-Personen
+- Firestore Rules wurden um `persons` erweitert
+
+
+## V16.1 Intelligence Tab Fix
+
+- Intelligence-Tab fest im Tab-Block eingebaut.
+- Intelligence-Inhalt wird garantiert direkt vor dem Investigation-Tab gerendert.
+- Fallback für `persons` eingebaut, damit die Akte nicht crasht, wenn noch keine Personen geladen sind.
+- Firestore Rules prüfen weiterhin `persons`.
