@@ -365,15 +365,18 @@ Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
 Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
 
 
-## V23.1 Abteilungszugriff Fix
+## V23.3 Stable Full Package
 
-- CaseForm erhält jetzt `profile`, damit die eigene Abteilung genutzt werden kann.
-- Abteilungszugriff beim Erstellen speichert `allowedDepartments` zuverlässig.
-- `departmentRestricted` wird automatisch gesetzt.
-- Schnellauswahl:
+Komplette stabile Version, nicht nur Anleitung.
+
+Fixes:
+- Blackscreen bei `New Case Jacket` behoben.
+- CaseForm nutzt keine `profile`-Abhängigkeit mehr.
+- Eigene Abteilung wird sicher über den User-Datensatz ermittelt.
+- Abteilungszugriff speichert `allowedDepartments` robust.
+- Buttons:
   - Alle Abteilungen erlauben
   - Nur meine Abteilung
-- Aktuelle Auswahl wird im Formular angezeigt.
-- Firestore-Regeln für Department-Zugriff robuster gemacht.
+- Firestore-Regeln für Department-Zugriff robuster.
 
-Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
+Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
