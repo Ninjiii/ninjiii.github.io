@@ -399,3 +399,25 @@ Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
 - Fehler `AlertTriangle is not defined` behoben.
 - Dashboard nutzt jetzt nur vorhandene Icons.
 - Kein manueller Import nötig.
+
+
+## V25 Badge & Dienstakte / Command Admin PRO
+
+- Neuer Sidebar-Punkt: `Meine Dienstakte`
+- Jeder Beamte sieht eigene Dienstakte mit:
+  - Dienstnummer
+  - Name
+  - E-Mail
+  - Rang
+  - Abteilung
+  - Badge-Karte
+  - Status
+- Beamte können dort nur ihr eigenes Passwort ändern.
+- Command Admin erweitert:
+  - Dienstnummer pro Beamten bearbeiten
+  - Abteilung pro Beamten bearbeiten
+  - Rang / Name / Sperre wie bisher
+  - kleine Admin-Statistik
+- Neue Accounts bekommen automatisch eine Dienstnummer.
+
+Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen.
