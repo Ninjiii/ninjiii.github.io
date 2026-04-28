@@ -2087,6 +2087,108 @@ function PersonProfilePanel({ person, cases, warrants = [], profile, ranks, onCl
 }
 
 
+
+function CommandDashboard({ cases = [], persons = [], warrants = [], users = [] }) {
+  const activeCases = cases.filter(c => ["OPEN", "ACTIVE", "UNDER SURVEILLANCE", "WARRANT ISSUED", "Offen", "In Bearbeitung"].includes(c.status));
+  const criticalCases = cases.filter(c => ["HIGH", "CRITICAL", "Hoch", "Kritisch"].includes(c.priority));
+  const activeWarrants = warrants.filter(w => w.status === "ACTIVE");
+  const activeUsers = users.filter(u => !u.suspended);
+
+  const recentPersons = [...persons].slice(0, 5);
+  const recentCases = [...cases].slice(0, 5);
+  const activityItems = cases
+    .flatMap(caseFile => (caseFile.activity || []).map(item => ({ ...item, caseNo: caseFile.caseNo, title: caseFile.title })))
+    .slice(-8)
+    .reverse();
+
+  return (
+    <>
+      <div className="stats">
+        <StatCard icon={FolderKanban} label="Aktive Akten" value={activeCases.length} />
+        <StatCard icon={Shield} label="Aktive Warrants" value={activeWarrants.length} />
+        <StatCard icon={AlertTriangle} label="Kritische Fälle" value={criticalCases.length} />
+        <StatCard icon={Users} label="Aktive Beamte" value={activeUsers.length} />
+      </div>
+
+      <section className="command-dashboard">
+        <div className="command-hero">
+          <span className="eyebrow">Federal Command Center</span>
+          <h2>Operatives Lagebild</h2>
+          <p>Live-Übersicht über Akten, Warrants, Personen, Aktivitäten und kritische Ermittlungen.</p>
+          <div className="command-signal-grid">
+            <div><b>{cases.length}</b><span>Gesamtakten</span></div>
+            <div><b>{persons.length}</b><span>Personenprofile</span></div>
+            <div><b>{warrants.length}</b><span>Warrants gesamt</span></div>
+          </div>
+        </div>
+
+        <CommandPanel title="Aktive Warrants" empty="Keine aktiven Warrants.">
+          {activeWarrants.slice(0, 6).map(warrant => (
+            <article className="command-item warrant-command-item" key={warrant.id}>
+              <b>{warrant.type} WARRANT</b>
+              <span>{warrant.personName || "-"} · {warrant.caseNo || "NO CASE"}</span>
+              <p>{warrant.reason || "-"}</p>
+            </article>
+          ))}
+        </CommandPanel>
+
+        <CommandPanel title="Kritische Akten" empty="Keine kritischen Akten.">
+          {criticalCases.slice(0, 6).map(caseFile => (
+            <article className="command-item" key={caseFile.id}>
+              <b>{caseFile.caseNo || "NO CASE"}</b>
+              <span>{caseFile.title}</span>
+              <p>{caseFile.status} · {caseFile.priority}</p>
+            </article>
+          ))}
+        </CommandPanel>
+
+        <CommandPanel title="Letzte Aktivitäten" empty="Keine Aktivitäten vorhanden.">
+          {activityItems.map((item, index) => (
+            <article className="command-item activity-command-item" key={index}>
+              <b>{item.caseNo || "CASE"}</b>
+              <span>{item.date || "-"} · {item.by || "-"}</span>
+              <p>{item.text || "-"}</p>
+            </article>
+          ))}
+        </CommandPanel>
+
+        <CommandPanel title="Neue Personenprofile" empty="Keine Personenprofile.">
+          {recentPersons.map(person => (
+            <article className="command-item person-command-item" key={person.id}>
+              <b>{person.name}</b>
+              <span>{person.alias || "-"} · {person.status || "UNKNOWN"}</span>
+              <p>{person.riskLevel || "STANDARD"} · {(person.caseNumbers || []).length} verbundene Akten</p>
+            </article>
+          ))}
+        </CommandPanel>
+
+        <CommandPanel title="Neue Akten" empty="Keine Akten vorhanden.">
+          {recentCases.map(caseFile => (
+            <article className="command-item" key={caseFile.id}>
+              <b>{caseFile.caseNo || "NO CASE"}</b>
+              <span>{caseFile.title}</span>
+              <p>{caseFile.department || "-"} · {caseFile.status}</p>
+            </article>
+          ))}
+        </CommandPanel>
+      </section>
+    </>
+  );
+}
+
+function CommandPanel({ title, empty, children }) {
+  const items = Array.isArray(children) ? children.filter(Boolean) : (children ? [children] : []);
+  return (
+    <div className="command-panel">
+      <h3>{title}</h3>
+      <div className="command-list">
+        {items.length ? items : <p className="muted">{empty}</p>}
+      </div>
+    </div>
+  );
+}
+
+
 function Dashboard({ user, profile }) {
   const ranks = useRanks();
   const [active, setActive] = useState("dashboard");
@@ -2170,7 +2272,7 @@ function Dashboard({ user, profile }) {
           <div className="user-pill">{profile.displayName || user.email}</div>
         </header>
 
-        {active === "dashboard" && <DashboardHome cases={cases} />}
+        {active === "dashboard" && <CommandDashboard cases={cases} persons={persons} warrants={warrants} users={users} />}
 
         {active === "akten" && mayReadCases && (
           <>

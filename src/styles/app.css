@@ -1963,3 +1963,151 @@ h1, h2, h3, p { margin-top: 0; }
   background: rgba(199,164,91,.10);
   color: #e6cb89;
 }
+
+
+/* V24 Dashboard PRO */
+.command-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, .8fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.command-hero,
+.command-panel {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(11,17,27,.88), rgba(7,11,18,.88));
+  border-radius: 6px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.24);
+}
+
+.command-hero {
+  min-height: 330px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  grid-row: span 2;
+}
+
+.command-hero::after {
+  content: "COMMAND CENTER";
+  position: absolute;
+  right: 20px;
+  bottom: 18px;
+  color: rgba(199,164,91,.10);
+  font-size: 38px;
+  font-weight: 950;
+  letter-spacing: .16em;
+}
+
+.command-hero h2 {
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  font-size: 40px;
+}
+
+.command-hero p {
+  color: var(--muted);
+  max-width: 680px;
+}
+
+.command-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 11px;
+  margin-top: 34px;
+}
+
+.command-signal-grid div {
+  border: 1px solid var(--line);
+  background: rgba(4,7,12,.58);
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.command-signal-grid b {
+  display: block;
+  font-size: 32px;
+  color: #e6cb89;
+}
+
+.command-signal-grid span {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  font-size: 11px;
+}
+
+.command-panel {
+  padding: 16px;
+}
+
+.command-panel h3 {
+  color: #e6cb89;
+  text-transform: uppercase;
+  letter-spacing: .105em;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+
+.command-list {
+  display: grid;
+  gap: 8px;
+}
+
+.command-item {
+  border: 1px solid var(--line);
+  border-left: 3px solid rgba(199,164,91,.55);
+  border-radius: 4px;
+  padding: 10px;
+  background: rgba(16,24,38,.62);
+}
+
+.command-item b {
+  display: block;
+  color: #e6cb89;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 12px;
+}
+
+.command-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.command-item p {
+  color: var(--ink);
+  font-size: 12px;
+  margin: 5px 0 0;
+}
+
+.warrant-command-item {
+  border-left-color: rgba(216,92,104,.72);
+  background: rgba(216,92,104,.07);
+}
+
+.activity-command-item {
+  border-left-color: rgba(107,152,255,.62);
+}
+
+.person-command-item {
+  border-left-color: rgba(123,212,154,.62);
+}
+
+@media (max-width: 1100px) {
+  .command-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .command-hero {
+    grid-row: auto;
+  }
+
+  .command-signal-grid {
+    grid-template-columns: 1fr;
+  }
+}
