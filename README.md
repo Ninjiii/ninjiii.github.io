@@ -438,3 +438,10 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Command Admin hat Button `Dienstakte öffnen`.
 - Admin-Dienstakte öffnet als Modal innerhalb des AdminPanels.
 - Admin kann Dienstnummer, Name, Rang, Abteilung und Sperrstatus bearbeiten.
+
+
+## V25.6 cred Fix
+
+- Fehler `cred is not defined` beim Account-Erstellen behoben.
+- Dienstnummer wird jetzt aus `result.user.uid` erzeugt.
+- `createUserWithEmailAndPassword` wird korrekt als `const result = await ...` gespeichert.
