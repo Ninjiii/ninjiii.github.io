@@ -2243,13 +2243,7 @@ h1, h2, h3, p { margin-top: 0; }
 }
 
 
-/* V25.2 Command Admin Upgrade */
-.admin-row-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
+/* V25.4 Command Admin Stable */
 .admin-service-file .service-file-grid {
   grid-template-columns: 300px minmax(0, 1fr);
 }

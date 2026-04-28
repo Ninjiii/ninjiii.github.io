@@ -1579,7 +1579,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 }
 
 
-function AdminServiceFilePanel({ userRecord, ranks, profile, onClose, onSave }) {
+function AdminServiceFilePanel({ userRecord, ranks, profile, onClose }) {
   if (!userRecord) return null;
 
   const [draft, setDraft] = useState({
@@ -1604,7 +1604,6 @@ function AdminServiceFilePanel({ userRecord, ranks, profile, onClose, onSave }) 
     });
 
     setStatus("Dienstakte gespeichert.");
-    if (onSave) onSave();
   }
 
   return (
@@ -1616,8 +1615,8 @@ function AdminServiceFilePanel({ userRecord, ranks, profile, onClose, onSave }) 
             <h2>{draft.displayName || userRecord.email}</h2>
           </div>
           <div className="profile-header-actions">
-            <button onClick={saveServiceFile}>Dienstakte speichern</button>
-            <button className="ghost" onClick={onClose}>Schließen</button>
+            <button type="button" onClick={saveServiceFile}>Dienstakte speichern</button>
+            <button type="button" className="ghost" onClick={onClose}>Schließen</button>
           </div>
         </header>
 
@@ -1681,8 +1680,7 @@ function AdminPanel({ currentUser, profile, ranks }) {
 
   useEffect(() => {
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
-    return onSnapshot(<>
-q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
 
   async function updateRole(userId, role) {
@@ -1842,8 +1840,8 @@ q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
                 <option value="">Keine Abteilung</option>
                 {DEPARTMENTS.map(department => <option key={department} value={department}>{department}</option>)}
               </select>
-              <span className={user.suspended ? "status-bad" : "status-good"}>{user.suspended ? "Gesperrt" : "Aktiv"}</span>
               <button type="button" className="ghost" onClick={() => setSelectedAdminUserId(user.id)}>Dienstakte öffnen</button>
+              <span className={user.suspended ? "status-bad" : "status-good"}>{user.suspended ? "Gesperrt" : "Aktiv"}</span>
               <button className={user.suspended ? "ghost" : "danger"} onClick={() => toggleSuspended(user)} disabled={user.uid === currentUser.uid}>
                 {user.suspended ? "Entsperren" : "Sperren"}
               </button>
@@ -1880,19 +1878,16 @@ q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
           </div>
         </div>
       )}
-    </section>
-
-
-      {selectedAdminUserId && (
-        <AdminServiceFilePanel
-          userRecord={users.find(u => u.id === selectedAdminUserId)}
-          ranks={ranks}
-          profile={profile}
-          onClose={() => setSelectedAdminUserId(null)}
-          onSave={() => setSelectedAdminUserId(null)}
-        />
-      )}
-    </>
+    
+        {selectedAdminUserId && (
+          <AdminServiceFilePanel
+            userRecord={users.find(u => u.id === selectedAdminUserId)}
+            ranks={ranks}
+            profile={profile}
+            onClose={() => setSelectedAdminUserId(null)}
+          />
+        )}
+</section>
   );
 }
 
