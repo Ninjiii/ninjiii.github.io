@@ -29,12 +29,6 @@ export async function exportCasePdf(caseFile) {
   const doc = new jsPDF();
   const lineHeight = 8;
   let y = 16;
-
-  function ensureSpace(required = 10) {
-    if (y + required > 280) {
-      doc.addPage();
-      y = 18;
-    }
   }
 
   function addWrappedText(label, value, width = 180) {
