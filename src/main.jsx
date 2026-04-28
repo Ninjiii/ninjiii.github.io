@@ -1979,6 +1979,7 @@ function Dashboard({ user, profile }) {
   const [persons, setPersons] = useState([]);
   const [selectedPersonId, setSelectedPersonId] = useState(null);
   const [warrants, setWarrants] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("Alle");
@@ -2035,6 +2036,12 @@ function Dashboard({ user, profile }) {
       <Sidebar profile={profile} active={active} setActive={setActive} />
       <main className="content">
         <header className="topbar">
+      <input
+        className="global-search"
+        placeholder="Suche: Personen, Akten, Warrants..."
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+      />
           <div>
             <span className="eyebrow">Sicherheitsstufe: {profile.role}</span>
             <h1>{active === "dashboard" ? "Federal Command Center" : active === "akten" ? "Case Records Division" : active}</h1>
@@ -2138,6 +2145,49 @@ function Dashboard({ user, profile }) {
             onClose={() => setSelectedPersonId(null)}
             onDeleted={() => setSelectedPersonId(null)}
           />
+        )}
+
+        
+        {searchQuery.trim() && (
+          <section className="search-results">
+            <h2>Suchergebnisse</h2>
+
+            <div className="search-group">
+              <h3>Personen</h3>
+              {persons.filter(p =>
+                (p.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (p.alias || "").toLowerCase().includes(searchQuery.toLowerCase())
+              ).map(p => (
+                <div key={p.id} className="search-item" onClick={() => { setSelectedPersonId(p.id); }}>
+                  <b>{p.name}</b> – {p.alias || "-"}
+                </div>
+              ))}
+            </div>
+
+            <div className="search-group">
+              <h3>Akten</h3>
+              {cases.filter(c =>
+                (c.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (c.caseNo || "").toLowerCase().includes(searchQuery.toLowerCase())
+              ).map(c => (
+                <div key={c.id} className="search-item">
+                  <b>{c.caseNo}</b> – {c.title}
+                </div>
+              ))}
+            </div>
+
+            <div className="search-group">
+              <h3>Warrants</h3>
+              {warrants.filter(w =>
+                (w.personName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (w.type || "").toLowerCase().includes(searchQuery.toLowerCase())
+              ).map(w => (
+                <div key={w.id} className="search-item">
+                  <b>{w.type}</b> – {w.personName} ({w.status})
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {!["dashboard", "akten", "admin", "personal"].includes(active) && (
