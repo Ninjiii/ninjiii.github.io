@@ -463,19 +463,10 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Datenlisten aktualisieren weiterhin per Firestore `onSnapshot`.
 
 
-## V27 UI Stability + PDF Fix
+## V27.2 Clean PDF Fix
 
-- Lange Listen wachsen nicht mehr endlos.
-- Intelligence, NetworkPRO, Beweismittel, Personen, Aktivitäten und Suchergebnisse haben Scrollbereiche.
-- Karten begrenzen lange Texte optisch.
-- Modale/Fenster bleiben innerhalb der Bildschirmhöhe scrollbar.
-- PDF Export nutzt Zeilenumbruch und Seitenumbruch.
-- Lange Sachverhalte werden nicht mehr abgeschnitten.
-
-
-## V27.1 PDF Build Fix
-
-- Build-Fehler `Identifier ensureSpace has already been declared` behoben.
-- Doppelte `ensureSpace` Deklaration aus `src/lib/pdf.js` entfernt.
-- UI-Stability Fix bleibt erhalten.
-- PDF-Umbruch bleibt erhalten.
+- `src/lib/pdf.js` wurde vollständig sauber ersetzt.
+- Keine doppelte `ensureSpace` Deklaration mehr.
+- Keine kaputten Klammern mehr.
+- Sachverhalt / Objective / lange Listen laufen sauber über mehrere PDF-Seiten.
+- UI-Stability Fix bleibt enthalten.
