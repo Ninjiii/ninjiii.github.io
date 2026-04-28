@@ -2266,3 +2266,46 @@ h1, h2, h3, p { margin-top: 0; }
 .admin-status-toggle input {
   width: auto;
 }
+
+
+/* V26 Live Sync PRO */
+.live-sync-badge,
+.case-live-sync {
+  border: 1px solid rgba(123,212,154,.42);
+  background: rgba(123,212,154,.08);
+  color: #b9ffd0;
+  border-radius: 999px;
+  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 900;
+}
+
+.live-sync-badge span,
+.case-live-sync span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #7bd49a;
+  box-shadow: 0 0 14px rgba(123,212,154,.85);
+  animation: livePulse 1.4s infinite;
+}
+
+.case-live-sync {
+  margin-right: 8px;
+}
+
+@keyframes livePulse {
+  0%, 100% {
+    opacity: .35;
+    transform: scale(.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}

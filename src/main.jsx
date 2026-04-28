@@ -585,9 +585,11 @@ function ModuleList({ title, items, empty, render }) {
   );
 }
 
-function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t: translate, lang = 'de' }) {
+function CaseDetails({ selected, profile, ranks, users, persons = [], focusRefreshTick = 0, onClose, t: translate, lang = 'de' }) {
   const t = translate || ((key) => SIMPLE_TRANSLATIONS[key] || key);
   const [tab, setTab] = useState("overview");
+  const [liveSelected, setLiveSelected] = useState(selected);
+  const [caseLiveSyncAt, setCaseLiveSyncAt] = useState(new Date());
   const [note, setNote] = useState("");
   const [log, setLog] = useState("");
   const [person, setPerson] = useState({ name: "", info: "" });
@@ -625,22 +627,38 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
   useEffect(() => {
     if (!selected) return;
     setCoreDraft({
-      title: selected.title || "",
-      status: selected.status || "Offen",
-      priority: selected.priority || "Normal",
-      classification: selected.classification || "Intern",
-      type: selected.type || "Fallakte",
-      location: selected.location || "",
-      department: selected.department || "",
-      description: selected.description || "",
-      objective: selected.objective || "",
-      tagsInput: (selected.tags || []).join(", "),
-      allowedDepartments: selected.allowedDepartments || []
+      title: selectedCase.title || "",
+      status: selectedCase.status || "Offen",
+      priority: selectedCase.priority || "Normal",
+      classification: selectedCase.classification || "Intern",
+      type: selectedCase.type || "Fallakte",
+      location: selectedCase.location || "",
+      department: selectedCase.department || "",
+      description: selectedCase.description || "",
+      objective: selectedCase.objective || "",
+      tagsInput: (selectedCase.tags || []).join(", "),
+      allowedDepartments: selectedCase.allowedDepartments || []
     });
     setEditCore(false);
   }, [selected?.id]);
 
   if (!selected) return null;
+
+  useEffect(() => {
+    if (!selected?.id) return;
+
+    setLiveSelected(selected);
+    const unsub = onSnapshot(doc(db, "cases", selected.id), snapshot => {
+      if (snapshot.exists()) {
+        setLiveSelected({ id: snapshot.id, ...snapshot.data() });
+        setCaseLiveSyncAt(new Date());
+      }
+    });
+
+    return () => unsub();
+  }, [selected?.id, focusRefreshTick]);
+
+  const selectedCase = liveSelected || selected;
 
   const currentUser = auth.currentUser;
   const mayEdit = profile.role === "Administrator"
@@ -655,7 +673,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       await updateDoc(doc(db, "cases", selected.id), {
         ...data,
         activity: [
-          ...(selected.activity || []),
+          ...(selectedCase.activity || []),
           auditEntry(activityText, currentUser)
         ],
         updatedAt: serverTimestamp()
@@ -716,8 +734,8 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 
     const personRef = await addDoc(collection(db, "persons"), {
       ...personDraft,
-      caseRefs: [selected.id],
-      caseNumbers: [selected.caseNo || selected.id],
+      caseRefs: [selectedCase.id],
+      caseNumbers: [selectedCase.caseNo || selectedCase.id],
       createdBy: currentUser.uid,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
@@ -732,7 +750,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     };
 
     await patchCase({
-      personRefs: [...(selected.personRefs || []), linkedPerson]
+      personRefs: [...(selectedCase.personRefs || []), linkedPerson]
     }, `Person linked to case: ${personDraft.name}`);
 
     setPersonDraft({ name: "", alias: "", status: "SUSPECT", riskLevel: "STANDARD", notes: "" });
@@ -744,18 +762,18 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     const target = persons.find(p => p.id === personToLink);
     if (!target) return;
 
-    const alreadyLinked = (selected.personRefs || []).some(p => p.id === target.id);
+    const alreadyLinked = (selectedCase.personRefs || []).some(p => p.id === target.id);
     if (alreadyLinked) return;
 
     await updateDoc(doc(db, "persons", target.id), {
-      caseRefs: Array.from(new Set([...(target.caseRefs || []), selected.id])),
-      caseNumbers: Array.from(new Set([...(target.caseNumbers || []), selected.caseNo || selected.id])),
+      caseRefs: Array.from(new Set([...(target.caseRefs || []), selectedCase.id])),
+      caseNumbers: Array.from(new Set([...(target.caseNumbers || []), selectedCase.caseNo || selectedCase.id])),
       updatedAt: serverTimestamp()
     });
 
     await patchCase({
       personRefs: [
-        ...(selected.personRefs || []),
+        ...(selectedCase.personRefs || []),
         {
           id: target.id,
           name: target.name,
@@ -773,7 +791,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     if (!mayEdit || !relationshipDraft.fromPersonId || !relationshipDraft.toPersonId) return;
     if (relationshipDraft.fromPersonId === relationshipDraft.toPersonId) return;
 
-    const personRefs = Array.isArray(selected.personRefs) ? selected.personRefs : [];
+    const personRefs = Array.isArray(selectedCase.personRefs) ? selectedCase.personRefs : [];
     const fromPerson = personRefs.find(p => p.id === relationshipDraft.fromPersonId);
     const toPerson = personRefs.find(p => p.id === relationshipDraft.toPersonId);
 
@@ -790,14 +808,14 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       toName: toPerson.name,
       type: relationshipDraft.type,
       note: relationshipDraft.note,
-      caseId: selected.id,
-      caseNo: selected.caseNo || selected.id,
+      caseId: selectedCase.id,
+      caseNo: selectedCase.caseNo || selectedCase.id,
       createdAt: new Date().toLocaleString("de-DE"),
       by: currentUser.email
     };
 
     await patchCase({
-      relationships: [...(selected.relationships || []), relation]
+      relationships: [...(selectedCase.relationships || []), relation]
     }, `Relationship added: ${fromPerson.name} -> ${toPerson.name}`);
 
     setRelationshipDraft({ fromPersonId: "", toPersonId: "", type: "ASSOCIATE", note: "" });
@@ -806,7 +824,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
   async function addLinkedCase() {
     if (!mayEdit || !linkedCaseInput.trim()) return;
     const nextLinks = [
-      ...(selected.linkedCases || []),
+      ...(selectedCase.linkedCases || []),
       {
         ref: linkedCaseInput.trim(),
         addedAt: new Date().toLocaleString("de-DE"),
@@ -820,7 +838,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
   async function addMilestone() {
     if (!mayEdit || !milestone.title.trim()) return;
     const nextMilestones = [
-      ...(selected.milestones || []),
+      ...(selectedCase.milestones || []),
       {
         ...milestone,
         date: new Date().toLocaleString("de-DE"),
@@ -833,19 +851,19 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 
   async function addNote() {
     if (!mayEdit || !note.trim()) return;
-    await patchCase({ notes: [...(selected.notes || []), { text: note, date: new Date().toLocaleString("de-DE"), by: currentUser.email }] }, "Notiz hinzugefügt");
+    await patchCase({ notes: [...(selectedCase.notes || []), { text: note, date: new Date().toLocaleString("de-DE"), by: currentUser.email }] }, "Notiz hinzugefügt");
     setNote("");
   }
 
   async function addLog() {
     if (!mayEdit || !log.trim()) return;
-    await patchCase({ logbook: [...(selected.logbook || []), { text: log, date: new Date().toLocaleString("de-DE"), by: currentUser.email }] }, "ETB-Eintrag hinzugefügt");
+    await patchCase({ logbook: [...(selectedCase.logbook || []), { text: log, date: new Date().toLocaleString("de-DE"), by: currentUser.email }] }, "ETB-Eintrag hinzugefügt");
     setLog("");
   }
 
   async function addPerson() {
     if (!mayEdit || !person.name.trim()) return;
-    await patchCase({ suspects: [...(selected.suspects || []), { ...person, status: "Relevant" }] }, `Person hinzugefügt: ${person.name}`);
+    await patchCase({ suspects: [...(selectedCase.suspects || []), { ...person, status: "Relevant" }] }, `Person hinzugefügt: ${person.name}`);
     setPerson({ name: "", info: "" });
   }
 
@@ -856,7 +874,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     let image = null;
 
     if (evidenceImageFile) {
-      const imagePath = `case-files/${selected.id}/evidence/${id}-${Date.now()}-${evidenceImageFile.name}`;
+      const imagePath = `case-files/${selectedCase.id}/evidence/${id}-${Date.now()}-${evidenceImageFile.name}`;
       const imageRef = ref(storage, imagePath);
       await uploadBytes(imageRef, evidenceImageFile);
       const imageUrl = await getDownloadURL(imageRef);
@@ -877,14 +895,14 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       chain: [auditEntry("Evidence entered into chain of custody", currentUser)]
     };
 
-    await patchCase({ evidence: [...(selected.evidence || []), record] }, `Evidence registered: ${evidence.name}`);
+    await patchCase({ evidence: [...(selectedCase.evidence || []), record] }, `Evidence registered: ${evidence.name}`);
     setEvidence({ name: "", info: "", source: "", type: "Physical / Digital Evidence", status: "SECURED" });
     setEvidenceImageFile(null);
   }
 
   async function addAppointment() {
     if (!mayEdit || !appointment.title.trim()) return;
-    await patchCase({ appointments: [...(selected.appointments || []), appointment] }, `Termin angelegt: ${appointment.title}`);
+    await patchCase({ appointments: [...(selectedCase.appointments || []), appointment] }, `Termin angelegt: ${appointment.title}`);
     setAppointment({ title: "", date: "" });
   }
 
@@ -905,7 +923,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     const lead = users.find(u => u.uid === assignmentDraft.leadAgentUid);
     const supervisor = users.find(u => u.uid === assignmentDraft.supervisorUid);
     const assigned = users.find(u => u.uid === assignmentDraft.assignedUid);
-    const existingAssigned = selected.assignedAgents || [];
+    const existingAssigned = selectedCase.assignedAgents || [];
     const nextAssigned = assigned
       ? [...existingAssigned.filter(a => a.uid !== assigned.uid), { uid: assigned.uid, email: assigned.email, role: "Assigned Agent" }]
       : existingAssigned;
@@ -924,12 +942,12 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
   async function uploadFile(file) {
     if (!mayEdit || !file) return;
     setUploading(true);
-    const path = `case-files/${selected.id}/${Date.now()}-${file.name}`;
+    const path = `case-files/${selectedCase.id}/${Date.now()}-${file.name}`;
     const fileRef = ref(storage, path);
     await uploadBytes(fileRef, file);
     const url = await getDownloadURL(fileRef);
     await patchCase({
-      documents: [...(selected.documents || []), { name: file.name, url, path, uploadedAt: new Date().toISOString() }]
+      documents: [...(selectedCase.documents || []), { name: file.name, url, path, uploadedAt: new Date().toISOString() }]
     }, `Dokument hochgeladen: ${file.name}`);
     setUploading(false);
   }
@@ -942,16 +960,16 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
   }
 
   function buildNetworkNodes() {
-    const linkedPersons = Array.isArray(selected.personRefs) ? selected.personRefs : [];
-    const relationships = Array.isArray(selected.relationships) ? selected.relationships : [];
-    const linkedCases = Array.isArray(selected.linkedCases) ? selected.linkedCases : [];
+    const linkedPersons = Array.isArray(selectedCase.personRefs) ? selectedCase.personRefs : [];
+    const relationships = Array.isArray(selectedCase.relationships) ? selectedCase.relationships : [];
+    const linkedCases = Array.isArray(selectedCase.linkedCases) ? selectedCase.linkedCases : [];
 
     const nodes = [
       {
         id: "case-root",
         type: "case",
-        label: selected.caseNo || "CASE",
-        subtitle: selected.title || "",
+        label: selectedCase.caseNo || "CASE",
+        subtitle: selectedCase.title || "",
         x: 50,
         y: 50
       }
@@ -1027,37 +1045,38 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     <section className="details wide-details">
       <header>
         <div>
-          <span className="eyebrow">{selected.caseNo || selected.type}</span>
-          <h2>{selected.title}</h2>
+          <span className="eyebrow">{selectedCase.caseNo || selectedCase.type}</span>
+          <h2>{selectedCase.title}</h2>
           <div className="meta">
-            <span>{selected.type}</span>
-            <span>{selected.status}</span>
-            <span>{selected.priority}</span>
-            <span>{selected.classification}</span>
+            <span>{selectedCase.type}</span>
+            <span>{selectedCase.status}</span>
+            <span>{selectedCase.priority}</span>
+            <span>{selectedCase.classification}</span>
           </div>
         </div>
-        <button className="ghost" onClick={onClose}>Schließen</button>
+        <div className="case-live-sync"><span></span> Live Sync · {caseLiveSyncAt.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</div>
+          <button className="ghost" onClick={onClose}>Schließen</button>
       </header>
 
-      <div className={`classification-banner classification-${(selected.classification || "CONFIDENTIAL").toLowerCase().replaceAll(" ", "-")}`}>
-        <strong>{selected.classification || "CONFIDENTIAL"}</strong>
-        <span>FEDERAL CASE RECORD • {selected.caseNo || "NO CASE NUMBER"} • {selected.status || "OPEN"}</span>
+      <div className={`classification-banner classification-${(selectedCase.classification || "CONFIDENTIAL").toLowerCase().replaceAll(" ", "-")}`}>
+        <strong>{selectedCase.classification || "CONFIDENTIAL"}</strong>
+        <span>FEDERAL CASE RECORD • {selectedCase.caseNo || "NO CASE NUMBER"} • {selectedCase.status || "OPEN"}</span>
       </div>
 
       <div className="federal-case-header">
-        <div><b>CASE NO</b><span>{selected.caseNo || "-"}</span></div>
-        <div><b>CLASSIFICATION</b><span>{selected.classification || "-"}</span></div>
-        <div><b>STATUS</b><span>{selected.status || "-"}</span></div>
-        <div><b>PRIORITY</b><span>{selected.priority || "-"}</span></div>
-        <div><b>LEAD AGENT</b><span>{selected.leadAgent || selected.assignee || "-"}</span></div>
-        <div><b>SUPERVISOR</b><span>{selected.supervisor || "-"}</span></div>
+        <div><b>CASE NO</b><span>{selectedCase.caseNo || "-"}</span></div>
+        <div><b>CLASSIFICATION</b><span>{selectedCase.classification || "-"}</span></div>
+        <div><b>STATUS</b><span>{selectedCase.status || "-"}</span></div>
+        <div><b>PRIORITY</b><span>{selectedCase.priority || "-"}</span></div>
+        <div><b>LEAD AGENT</b><span>{selectedCase.leadAgent || selectedCase.assignee || "-"}</span></div>
+        <div><b>SUPERVISOR</b><span>{selectedCase.supervisor || "-"}</span></div>
       </div>
 
       <div className="case-toolbar">
         {mayExport && <button onClick={() => exportCasePdf(selected)}>PDF Export</button>}
         {mayDelete && <button className="danger" onClick={removeCase}>Löschen</button>}
         {mayAssign && (
-          <select value={selected.assigneeUid || ""} onChange={e => assignTo(e.target.value)}>
+          <select value={selectedCase.assigneeUid || ""} onChange={e => assignTo(e.target.value)}>
             <option value="">Assign Case...</option>
             {users.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email} — {u.role}</option>)}
           </select>
@@ -1087,18 +1106,18 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
             {!editCore && (
               <>
                 <div className="case-field-grid">
-                  <div><b>Titel</b><span>{selected.title || "-"}</span></div>
-                  <div><b>Aktenart</b><span>{selected.type || "-"}</span></div>
-                  <div><b>Status</b><span>{selected.status || "-"}</span></div>
-                  <div><b>Priorität</b><span>{selected.priority || "-"}</span></div>
-                  <div><b>Einstufung</b><span>{selected.classification || "-"}</span></div>
-                  <div><b>Ort</b><span>{selected.location || "-"}</span></div>
+                  <div><b>Titel</b><span>{selectedCase.title || "-"}</span></div>
+                  <div><b>Aktenart</b><span>{selectedCase.type || "-"}</span></div>
+                  <div><b>Status</b><span>{selectedCase.status || "-"}</span></div>
+                  <div><b>Priorität</b><span>{selectedCase.priority || "-"}</span></div>
+                  <div><b>Einstufung</b><span>{selectedCase.classification || "-"}</span></div>
+                  <div><b>Ort</b><span>{selectedCase.location || "-"}</span></div>
                 </div>
 
                 <h3>Incident Narrative</h3>
-                <p>{selected.description || "Keine Beschreibung."}</p>
+                <p>{selectedCase.description || "Keine Beschreibung."}</p>
                 <h3>Investigative Objective</h3>
-                <p>{selected.objective || "Kein Investigative Objective hinterlegt."}</p>
+                <p>{selectedCase.objective || "Kein Investigative Objective hinterlegt."}</p>
               </>
             )}
 
@@ -1139,17 +1158,17 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
             {mayEdit ? (
               <>
                 <label>Status</label>
-                <select value={selected.status || "Offen"} onChange={e => quickUpdateField("status", e.target.value, "Status")}>
+                <select value={selectedCase.status || "Offen"} onChange={e => quickUpdateField("status", e.target.value, "Status")}>
                   {STATUSES.map(x => <option key={x}>{x}</option>)}
                 </select>
 
                 <label>Priorität</label>
-                <select value={selected.priority || "Normal"} onChange={e => quickUpdateField("priority", e.target.value, "Priorität")}>
+                <select value={selectedCase.priority || "Normal"} onChange={e => quickUpdateField("priority", e.target.value, "Priorität")}>
                   {PRIORITIES.map(x => <option key={x}>{x}</option>)}
                 </select>
 
                 <label>Einstufung</label>
-                <select value={selected.classification || "Intern"} onChange={e => quickUpdateField("classification", e.target.value, "Einstufung")}>
+                <select value={selectedCase.classification || "Intern"} onChange={e => quickUpdateField("classification", e.target.value, "Einstufung")}>
                   {CLASSIFICATIONS.map(x => <option key={x}>{x}</option>)}
                 </select>
               </>
@@ -1158,9 +1177,9 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
             )}
 
             <h3>Verantwortung</h3>
-            <p><b>Bearbeiter:</b><br />{selected.assignee || "Nicht zugewiesen"}</p>
-            <p><b>Ort:</b><br />{selected.location || "-"}</p>
-            <p><b>Abteilung:</b><br />{selected.department || "-"}</p>
+            <p><b>Bearbeiter:</b><br />{selectedCase.assignee || "Nicht zugewiesen"}</p>
+            <p><b>Ort:</b><br />{selectedCase.location || "-"}</p>
+            <p><b>Abteilung:</b><br />{selectedCase.department || "-"}</p>
           </section>
         </div>
       )}
@@ -1178,13 +1197,13 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
             </div>
 
             <div className="network-stable-canvas">
-              <div className="network-stable-center" onClick={() => setNetworkSelection({ type: "case", label: selected.caseNo || "CASE", subtitle: selected.title || "" })}>
-                <b>{selected.caseNo || "CASE"}</b>
-                <span>{selected.title || "-"}</span>
+              <div className="network-stable-center" onClick={() => setNetworkSelection({ type: "case", label: selectedCase.caseNo || "CASE", subtitle: selectedCase.title || "" })}>
+                <b>{selectedCase.caseNo || "CASE"}</b>
+                <span>{selectedCase.title || "-"}</span>
               </div>
 
               <div className="network-stable-ring">
-                {(selected.personRefs || []).map((person, index) => (
+                {(selectedCase.personRefs || []).map((person, index) => (
                   <button
                     type="button"
                     className="network-stable-node person-node"
@@ -1196,7 +1215,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
                   </button>
                 ))}
 
-                {(selected.linkedCases || []).map((link, index) => (
+                {(selectedCase.linkedCases || []).map((link, index) => (
                   <button
                     type="button"
                     className="network-stable-node linked-case-node"
@@ -1209,7 +1228,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
                 ))}
               </div>
 
-              {!(selected.personRefs || []).length && !(selected.linkedCases || []).length && (
+              {!(selectedCase.personRefs || []).length && !(selectedCase.linkedCases || []).length && (
                 <p className="network-empty">Keine Personen oder verknüpften Akten vorhanden. Verknüpfe zuerst Personen im Intelligence-Tab.</p>
               )}
             </div>
@@ -1228,14 +1247,14 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
             )}
 
             <h3>{t("relationships") || "Beziehungen"}</h3>
-            {(selected.relationships || []).map((rel, i) => (
+            {(selectedCase.relationships || []).map((rel, i) => (
               <article className="record-card" key={i}>
                 <b>{rel.fromName || "-"} → {rel.toName || "-"}</b>
                 <span>{rel.type || "-"} · {rel.createdAt || "-"} · {rel.by || "-"}</span>
                 <p>{rel.note || "-"}</p>
               </article>
             ))}
-            {!(selected.relationships || []).length && <p className="muted">{t("noRecords") || "Keine Einträge vorhanden."}</p>}
+            {!(selectedCase.relationships || []).length && <p className="muted">{t("noRecords") || "Keine Einträge vorhanden."}</p>}
           </section>
 
           {mayEdit && (
@@ -1243,11 +1262,11 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
               <h3>{t("addRelationship") || "Beziehung hinzufügen"}</h3>
               <select value={relationshipDraft.fromPersonId} onChange={e => setRelationshipDraft({ ...relationshipDraft, fromPersonId: e.target.value })}>
                 <option value="">Person A...</option>
-                {(selected.personRefs || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {(selectedCase.personRefs || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <select value={relationshipDraft.toPersonId} onChange={e => setRelationshipDraft({ ...relationshipDraft, toPersonId: e.target.value })}>
                 <option value="">Person B...</option>
-                {(selected.personRefs || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {(selectedCase.personRefs || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <select value={relationshipDraft.type} onChange={e => setRelationshipDraft({ ...relationshipDraft, type: e.target.value })}>
                 <option>ASSOCIATE</option>
@@ -1270,18 +1289,18 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
             <h3>{t("intelligenceNetwork")}</h3>
             <div className="intel-network">
               <div className="intel-node case-node">
-                <b>{selected.caseNo || "CASE"}</b>
-                <span>{selected.title}</span>
+                <b>{selectedCase.caseNo || "CASE"}</b>
+                <span>{selectedCase.title}</span>
               </div>
 
-              {(selected.personRefs || []).map(person => (
+              {(selectedCase.personRefs || []).map(person => (
                 <div className="intel-node person-node" key={person.id}>
                   <b>{person.name}</b>
                   <span>{person.alias || labelValue(person.status, lang)}</span>
                 </div>
               ))}
 
-              {(selected.linkedCases || []).map((link, i) => (
+              {(selectedCase.linkedCases || []).map((link, i) => (
                 <div className="intel-node linked-case-node" key={i}>
                   <b>{link.ref}</b>
                   <span>{t("linkedCases")}</span>
@@ -1290,14 +1309,14 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
             </div>
           </section>
 
-          <ModuleList title={t("linkedPersons")} items={selected.personRefs || []} empty={t("noRecords")} render={(person, i) => {
+          <ModuleList title={t("linkedPersons")} items={selectedCase.personRefs || []} empty={t("noRecords")} render={(person, i) => {
             const full = persons.find(p => p.id === person.id) || person;
             return (
               <article key={i} className="record-card">
                 <b>{full.name}</b>
                 <span>{full.alias || "-"} · {labelValue(full.status, lang)} · {labelValue(full.riskLevel, lang)}</span>
                 <p>{full.notes || "-"}</p>
-                <small>{t("connectedCases")}: {(full.caseNumbers || []).join(", ") || selected.caseNo || "-"}</small>
+                <small>{t("connectedCases")}: {(full.caseNumbers || []).join(", ") || selectedCase.caseNo || "-"}</small>
               </article>
             );
           }} />
@@ -1344,7 +1363,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
                 { key: "WARRANT", label: "Warrant / Action" },
                 { key: "CLOSED", label: "Closed" }
               ].map(step => {
-                const hit = (selected.milestones || []).some(m => m.status === step.key) || selected.status?.includes(step.key);
+                const hit = (selectedCase.milestones || []).some(m => m.status === step.key) || selectedCase.status?.includes(step.key);
                 return (
                   <div key={step.key} className={hit ? "flow-step active" : "flow-step"}>
                     <b>{step.key}</b>
@@ -1355,7 +1374,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
             </div>
           </section>
 
-          <ModuleList title="Investigation Milestones" items={selected.milestones || []} empty="No investigation milestones." render={(m, i) => (
+          <ModuleList title="Investigation Milestones" items={selectedCase.milestones || []} empty="No investigation milestones." render={(m, i) => (
             <article key={i} className="timeline-item">
               <b>{m.status} · {m.title}</b>
               <span>{m.date} · {m.by}</span>
@@ -1384,7 +1403,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 
       {tab === "links" && (
         <div className="detail-grid">
-          <ModuleList title="Linked Federal Case Files" items={selected.linkedCases || []} empty="No linked cases." render={(link, i) => (
+          <ModuleList title="Linked Federal Case Files" items={selectedCase.linkedCases || []} empty="No linked cases." render={(link, i) => (
             <article key={i} className="record-card">
               <b>{link.ref}</b>
               <span>{link.addedAt} · {link.by}</span>
@@ -1407,9 +1426,9 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
           <section className="module-card span-2">
             <h3>Case Assignment Structure</h3>
             <div className="assignment-grid">
-              <div><b>Lead Agent</b><span>{selected.leadAgent || selected.assignee || "-"}</span></div>
-              <div><b>Supervising Officer</b><span>{selected.supervisor || "-"}</span></div>
-              <div><b>Assigned Agents</b><span>{(selected.assignedAgents || []).map(a => a.email).join(", ") || "-"}</span></div>
+              <div><b>Lead Agent</b><span>{selectedCase.leadAgent || selectedCase.assignee || "-"}</span></div>
+              <div><b>Supervising Officer</b><span>{selectedCase.supervisor || "-"}</span></div>
+              <div><b>Assigned Agents</b><span>{(selectedCase.assignedAgents || []).map(a => a.email).join(", ") || "-"}</span></div>
             </div>
 
             {mayAssign && (
@@ -1438,7 +1457,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 
       {tab === "persons" && (
         <div className="detail-grid">
-          <ModuleList title="Subjects / Persons of Interest" items={selected.suspects || []} empty="Keine Personen hinterlegt." render={(p, i) => (
+          <ModuleList title="Subjects / Persons of Interest" items={selectedCase.suspects || []} empty="Keine Personen hinterlegt." render={(p, i) => (
             <article key={i} className="record-card"><b>{p.name}</b><span>{p.status}</span><p>{p.info}</p></article>
           )} />
           {mayEdit && <section className="module-card">
@@ -1452,7 +1471,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 
       {tab === "evidence" && (
         <div className="detail-grid">
-          <ModuleList title="Evidence Registry" items={selected.evidence || []} empty="Keine Evidence Registry hinterlegt." render={(ev, i) => (
+          <ModuleList title="Evidence Registry" items={selectedCase.evidence || []} empty="Keine Evidence Registry hinterlegt." render={(ev, i) => (
             <article key={i} className="record-card evidence-record">
               <b>{ev.id || "NO-EVIDENCE-ID"} · {ev.name}</b>
               <span>{ev.type} · {ev.status || "SECURED"} · Source: {ev.source || "Unknown"}</span>
@@ -1497,7 +1516,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       )}
 
       {tab === "documents" && (
-        <ModuleList title="Document Vault" items={selected.documents || []} empty="Keine Document Vault hochgeladen." render={(d, i) => (
+        <ModuleList title="Document Vault" items={selectedCase.documents || []} empty="Keine Document Vault hochgeladen." render={(d, i) => (
           <a key={i} href={d.url} target="_blank" className="doc-link">{d.name}</a>
         )} />
       )}
@@ -1511,7 +1530,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 
       {tab === "notes" && (
         <div className="detail-grid">
-          <ModuleList title="Agent Notes" items={selected.notes || []} empty="Keine Agent Notes." render={(n, i) => (
+          <ModuleList title="Agent Notes" items={selectedCase.notes || []} empty="Keine Agent Notes." render={(n, i) => (
             <article key={i} className="record-card"><b>{n.date}</b><span>{n.by}</span><p>{n.text}</p></article>
           )} />
           {mayEdit && <section className="module-card">
@@ -1524,7 +1543,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
 
       {tab === "logbook" && (
         <div className="detail-grid">
-          <ModuleList title="Operations Log" items={selected.logbook || []} empty="Keine ETB-Einträge." render={(l, i) => (
+          <ModuleList title="Operations Log" items={selectedCase.logbook || []} empty="Keine ETB-Einträge." render={(l, i) => (
             <article key={i} className="record-card"><b>{l.date}</b><span>{l.by}</span><p>{l.text}</p></article>
           )} />
           {mayEdit && <section className="module-card">
@@ -1542,7 +1561,7 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       )}
 
       {tab === "timeline" && (
-        <ModuleList title="Audit Trail" items={selected.activity || []} empty="Keine Aktivität." render={(a, i) => (
+        <ModuleList title="Audit Trail" items={selectedCase.activity || []} empty="Keine Aktivität." render={(a, i) => (
           <article key={i} className="timeline-item"><b>{a.date}</b><span>{a.by}</span><p>{a.text}</p></article>
         )} />
       )}
@@ -1679,8 +1698,28 @@ function AdminPanel({ currentUser, profile, ranks }) {
   const [rankPermissions, setRankPermissions] = useState(["read"]);
 
   useEffect(() => {
+    function refreshOnFocus() {
+      setLastLiveSync(new Date());
+      setFocusRefreshTick(tick => tick + 1);
+    }
+
+    window.addEventListener("focus", refreshOnFocus);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshOnFocus();
+    });
+
+    return () => {
+      window.removeEventListener("focus", refreshOnFocus);
+      document.removeEventListener("visibilitychange", refreshOnFocus);
+    };
+  }, []);
+
+  useEffect(() => {
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
-    return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(q, snap => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLastLiveSync(new Date());
+    });
   }, []);
 
   async function updateRole(userId, role) {
@@ -2406,6 +2445,8 @@ function Dashboard({ user, profile }) {
   const [typeFilter, setTypeFilter] = useState("Alle");
   const [statusFilter, setStatusFilter] = useState("Alle");
   const [showForm, setShowForm] = useState(false);
+  const [lastLiveSync, setLastLiveSync] = useState(new Date());
+  const [focusRefreshTick, setFocusRefreshTick] = useState(0);
 
   const mayReadCases = can(profile.role, "read", ranks);
   const mayCreateCases = can(profile.role, "create", ranks);
@@ -2418,18 +2459,25 @@ function Dashboard({ user, profile }) {
 
   useEffect(() => {
     const q = query(collection(db, "persons"), orderBy("createdAt", "desc"));
-    return onSnapshot(q, snap => setPersons(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(q, snap => {
+      setPersons(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLastLiveSync(new Date());
+    });
   }, []);
 
   useEffect(() => {
     const q = query(collection(db, "warrants"), orderBy("issuedAt", "desc"));
-    return onSnapshot(q, snap => setWarrants(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(q, snap => {
+      setWarrants(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLastLiveSync(new Date());
+    });
   }, []);
 
   useEffect(() => {
     const q = query(collection(db, "cases"), orderBy("createdAt", "desc"));
     return onSnapshot(q, snap => {
       const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setLastLiveSync(new Date());
       setCases(mayViewAllCases ? loaded : loaded.filter(caseFile => {
         const ownOrAssigned = isOwnOrAssignedCase(caseFile, user);
         const allowedDepartments = caseFile.allowedDepartments || [];
@@ -2472,7 +2520,11 @@ function Dashboard({ user, profile }) {
             <span className="eyebrow">Sicherheitsstufe: {profile.role}</span>
             <h1>{active === "dashboard" ? "Federal Command Center" : active === "akten" ? "Case Records Division" : active}</h1>
           </div>
-          <div className="user-pill">{profile.displayName || user.email}</div>
+          <div className="live-sync-badge" title="Live Sync aktiv">
+              <span></span>
+              Live · {lastLiveSync.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </div>
+            <div className="user-pill">{profile.displayName || user.email}</div>
         </header>
 
         {active === "dienstakte" && <OwnServicePanel currentUser={user} profile={profile} />}
