@@ -350,3 +350,16 @@ Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
 - Firestore Rules erlauben `delete` für `persons` nur Administratoren.
 
 Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
+
+
+## V23 Abteilungen-System
+
+- Nutzer/Beamte können im Adminpanel einer Abteilung zugeordnet werden.
+- Beim Account-Erstellen kann direkt eine Abteilung gesetzt werden.
+- Bestehende Nutzer können im Adminpanel die Abteilung wechseln.
+- Akten können auf bestimmte Abteilungen beschränkt werden.
+- Normale Nutzer sehen nur eigene/zugewiesene Akten, wenn ihre Abteilung erlaubt ist.
+- Leitung/Admin/Director sehen weiterhin alles.
+- Firestore Rules wurden um Department-Checks erweitert.
+
+Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
