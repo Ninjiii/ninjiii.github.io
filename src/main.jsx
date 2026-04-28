@@ -158,6 +158,7 @@ function emptyCase(user) {
     location: "",
     department: "Major Crimes Division",
     allowedDepartments: [],
+    departmentRestricted: false,
     description: "",
     objective: "",
     tagsInput: "",
@@ -241,15 +242,35 @@ function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  function restrictToOwnDepartment() {
+    if (!profile?.department) return;
+    setForm(current => ({
+      ...current,
+      allowedDepartments: [profile.department],
+      departmentRestricted: true
+    }));
+  }
+
+  function clearAllowedDepartments() {
+    setForm(current => ({
+      ...current,
+      allowedDepartments: [],
+      departmentRestricted: false
+    }));
+  }
+
   function toggleAllowedDepartment(department) {
     setForm(current => {
-      const currentList = current.allowedDepartments || [];
+      const currentList = Array.isArray(current.allowedDepartments) ? current.allowedDepartments : [];
       const exists = currentList.includes(department);
+      const nextList = exists
+        ? currentList.filter(item => item !== department)
+        : [...currentList, department];
+
       return {
         ...current,
-        allowedDepartments: exists
-          ? currentList.filter(item => item !== department)
-          : [...currentList, department]
+        allowedDepartments: nextList,
+        departmentRestricted: nextList.length > 0
       };
     });
   }
@@ -410,8 +431,8 @@ function CaseForm({ user, users, onCreate }) {
       assigneeUid: form.assigneeUid,
       location: form.location,
       department: form.department,
-      allowedDepartments: form.allowedDepartments || [],
-      departmentRestricted: (form.allowedDepartments || []).length > 0,
+      allowedDepartments: Array.isArray(form.allowedDepartments) ? form.allowedDepartments : [],
+      departmentRestricted: Array.isArray(form.allowedDepartments) && form.allowedDepartments.length > 0,
       description: form.description,
       objective: form.objective,
       tags: form.tagsInput.split(",").map(t => t.trim()).filter(Boolean),
@@ -470,9 +491,13 @@ function CaseForm({ user, users, onCreate }) {
       <section className="mini-section department-access-box">
         <h3>Abteilungszugriff</h3>
         <p className="muted">Leer lassen = keine Abteilungsbeschränkung. Wenn Abteilungen ausgewählt sind, sehen normale Nutzer nur Akten ihrer Abteilung.</p>
+        <div className="department-quick-actions">
+          <button type="button" className="ghost" onClick={clearAllowedDepartments}>Alle Abteilungen erlauben</button>
+          {profile?.department && <button type="button" className="ghost" onClick={restrictToOwnDepartment}>Nur meine Abteilung</button>}
+        </div>
         <div className="department-check-grid">
           {DEPARTMENTS.map(department => (
-            <label key={department}>
+            <label key={department} className={(form.allowedDepartments || []).includes(department) ? "checked" : ""}>
               <input
                 type="checkbox"
                 checked={(form.allowedDepartments || []).includes(department)}
@@ -482,6 +507,9 @@ function CaseForm({ user, users, onCreate }) {
             </label>
           ))}
         </div>
+        <p className="muted">
+          Aktuell: {(form.allowedDepartments || []).length ? form.allowedDepartments.join(", ") : "Alle Abteilungen dürfen diese Akte sehen"}
+        </p>
       </section>
 
       <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder="Incident Narrative / Hintergrund" />

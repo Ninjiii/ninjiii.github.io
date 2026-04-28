@@ -1948,3 +1948,18 @@ h1, h2, h3, p { margin-top: 0; }
 .admin-row {
   grid-template-columns: minmax(180px, 1.2fr) minmax(170px, .9fr) minmax(140px, .75fr) minmax(180px, .9fr) minmax(90px, .45fr) minmax(105px, .45fr);
 }
+
+
+/* V23.1 Abteilungszugriff Fix */
+.department-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 10px;
+}
+
+.department-check-grid label.checked {
+  border-color: rgba(199,164,91,.58);
+  background: rgba(199,164,91,.10);
+  color: #e6cb89;
+}
