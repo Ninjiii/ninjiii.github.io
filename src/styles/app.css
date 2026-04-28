@@ -2309,3 +2309,66 @@ h1, h2, h3, p { margin-top: 0; }
     transform: scale(1.15);
   }
 }
+
+
+/* V27 UI Stability */
+.module-list,
+.command-list,
+.search-results,
+.person-register-grid,
+.network-stable-ring,
+.department-check-grid {
+  max-height: 440px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.intel-network {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.record-card,
+.command-item,
+.person-card-pro,
+.network-stable-node,
+.intel-node {
+  max-height: 180px;
+  overflow: hidden;
+}
+
+.record-card p,
+.command-item p,
+.person-card-pro p {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.evidence-viewer-modal,
+.person-profile-panel,
+.case-modal,
+.case-detail,
+.case-detail-panel {
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.detail-grid {
+  align-items: start;
+}
+
+.module-card {
+  min-height: 0;
+}
+
+.module-card textarea {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.case-field-grid span,
+.case-field-grid p {
+  word-break: break-word;
+}

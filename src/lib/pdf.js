@@ -30,6 +30,33 @@ export async function exportCasePdf(caseFile) {
   const lineHeight = 8;
   let y = 16;
 
+  function ensureSpace(required = 10) {
+    if (y + required > 280) {
+      doc.addPage();
+      y = 18;
+    }
+  }
+
+  function addWrappedText(label, value, width = 180) {
+    const text = value && String(value).trim() ? String(value) : "-";
+    if (label) {
+      ensureSpace(8);
+      doc.setFont(undefined, "bold");
+      doc.text(String(label), 14, y);
+      y += 6;
+      doc.setFont(undefined, "normal");
+    }
+
+    const lines = doc.splitTextToSize(text, width);
+    lines.forEach(line => {
+      ensureSpace(6);
+      doc.text(line, 14, y);
+      y += 6;
+    });
+    y += 3;
+  }
+
+
   const ensureSpace = (needed = 20) => {
     if (y + needed > 280) {
       doc.addPage();
