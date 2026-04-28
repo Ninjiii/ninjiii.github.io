@@ -363,3 +363,17 @@ Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
 - Firestore Rules wurden um Department-Checks erweitert.
 
 Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
+
+
+## V23.1 Abteilungszugriff Fix
+
+- CaseForm erhält jetzt `profile`, damit die eigene Abteilung genutzt werden kann.
+- Abteilungszugriff beim Erstellen speichert `allowedDepartments` zuverlässig.
+- `departmentRestricted` wird automatisch gesetzt.
+- Schnellauswahl:
+  - Alle Abteilungen erlauben
+  - Nur meine Abteilung
+- Aktuelle Auswahl wird im Formular angezeigt.
+- Firestore-Regeln für Department-Zugriff robuster gemacht.
+
+Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
