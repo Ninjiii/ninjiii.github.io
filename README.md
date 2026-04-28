@@ -380,3 +380,15 @@ Fixes:
 - Firestore-Regeln für Department-Zugriff robuster.
 
 Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
+
+
+## V24 Dashboard PRO
+
+- Command-Center-Dashboard
+- aktive Akten
+- aktive Warrants
+- kritische Fälle
+- aktive Beamte
+- letzte Aktivitäten
+- neue Personenprofile
+- neue Akten
