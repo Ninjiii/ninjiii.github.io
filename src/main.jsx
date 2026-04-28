@@ -1578,10 +1578,103 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
   );
 }
 
+
+function AdminServiceFilePanel({ userRecord, ranks, profile, onClose, onSave }) {
+  if (!userRecord) return null;
+
+  const [draft, setDraft] = useState({
+    displayName: userRecord.displayName || "",
+    serviceNumber: userRecord.serviceNumber || serviceNumber(userRecord.uid || userRecord.id),
+    role: userRecord.role || "Anwärter",
+    department: userRecord.department || "",
+    suspended: Boolean(userRecord.suspended)
+  });
+
+  const [status, setStatus] = useState("");
+  const badge = badgeRecord({ ...userRecord, ...draft });
+
+  async function saveServiceFile() {
+    await updateDoc(doc(db, "users", userRecord.id), {
+      displayName: draft.displayName,
+      serviceNumber: draft.serviceNumber,
+      role: draft.role,
+      department: draft.department,
+      suspended: draft.suspended,
+      updatedAt: serverTimestamp()
+    });
+
+    setStatus("Dienstakte gespeichert.");
+    if (onSave) onSave();
+  }
+
+  return (
+    <div className="person-modal-backdrop">
+      <section className="person-profile-panel admin-service-file">
+        <header>
+          <div>
+            <span className="eyebrow">Command Admin · Dienstakte</span>
+            <h2>{draft.displayName || userRecord.email}</h2>
+          </div>
+          <div className="profile-header-actions">
+            <button onClick={saveServiceFile}>Dienstakte speichern</button>
+            <button className="ghost" onClick={onClose}>Schließen</button>
+          </div>
+        </header>
+
+        {status && <div className="notice">{status}</div>}
+
+        <div className="service-file-grid">
+          <aside className="fib-badge-card">
+            <div className="badge-seal">FIB</div>
+            <strong>{badge.callsign}</strong>
+            <span>{badge.serviceNumber}</span>
+            <small>{badge.clearance}</small>
+            <small>{badge.status}</small>
+          </aside>
+
+          <main className="person-profile-main">
+            <section className="module-card">
+              <h3>Dienstakte bearbeiten</h3>
+              <div className="grid-2">
+                <input value={draft.displayName} onChange={e => setDraft({ ...draft, displayName: e.target.value })} placeholder="Anzeigename / Callsign" />
+                <input value={draft.serviceNumber} onChange={e => setDraft({ ...draft, serviceNumber: e.target.value })} placeholder="Dienstnummer" />
+                <select value={draft.role} onChange={e => setDraft({ ...draft, role: e.target.value })}>
+                  {ranks.filter(r => profile.role === "Administrator" || r.name !== "Administrator").map(r => <option key={r.name}>{r.name}</option>)}
+                </select>
+                <select value={draft.department} onChange={e => setDraft({ ...draft, department: e.target.value })}>
+                  <option value="">Keine Abteilung</option>
+                  {DEPARTMENTS.map(department => <option key={department} value={department}>{department}</option>)}
+                </select>
+              </div>
+
+              <label className="admin-status-toggle">
+                <input type="checkbox" checked={draft.suspended} onChange={e => setDraft({ ...draft, suspended: e.target.checked })} />
+                Account gesperrt
+              </label>
+            </section>
+
+            <section className="module-card">
+              <h3>Systemdaten</h3>
+              <div className="case-field-grid">
+                <div><b>E-Mail</b><span>{userRecord.email}</span></div>
+                <div><b>UID</b><span>{userRecord.uid || "-"}</span></div>
+                <div><b>Status</b><span>{draft.suspended ? "SUSPENDED" : "ACTIVE"}</span></div>
+                <div><b>Clearance</b><span>{badge.clearance}</span></div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+
 function AdminPanel({ currentUser, profile, ranks }) {
   const [users, setUsers] = useState([]);
   const [persons, setPersons] = useState([]);
   const [status, setStatus] = useState("");
+  const [selectedAdminUserId, setSelectedAdminUserId] = useState(null);
   const [newUser, setNewUser] = useState({ email: "", password: "", displayName: "", role: ranks[0]?.name || "Anwärter", department: "" });
   const [rankName, setRankName] = useState("");
   const [rankPermissions, setRankPermissions] = useState(["read"]);
@@ -1749,6 +1842,7 @@ function AdminPanel({ currentUser, profile, ranks }) {
                 {DEPARTMENTS.map(department => <option key={department} value={department}>{department}</option>)}
               </select>
               <span className={user.suspended ? "status-bad" : "status-good"}>{user.suspended ? "Gesperrt" : "Aktiv"}</span>
+              <button type="button" className="ghost" onClick={() => setSelectedAdminUserId(user.id)}>Dienstakte öffnen</button>
               <button className={user.suspended ? "ghost" : "danger"} onClick={() => toggleSuspended(user)} disabled={user.uid === currentUser.uid}>
                 {user.suspended ? "Entsperren" : "Sperren"}
               </button>
@@ -1786,6 +1880,17 @@ function AdminPanel({ currentUser, profile, ranks }) {
         </div>
       )}
     </section>
+
+        {selectedAdminUserId && (
+          <AdminServiceFilePanel
+            userRecord={users.find(u => u.id === selectedAdminUserId)}
+            ranks={ranks}
+            profile={profile}
+            onClose={() => setSelectedAdminUserId(null)}
+            onSave={() => setSelectedAdminUserId(null)}
+          />
+        )}
+
   );
 }
 

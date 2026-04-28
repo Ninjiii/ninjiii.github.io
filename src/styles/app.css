@@ -2241,3 +2241,34 @@ h1, h2, h3, p { margin-top: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* V25.2 Command Admin Upgrade */
+.admin-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-service-file .service-file-grid {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.admin-status-toggle {
+  border: 1px solid var(--line);
+  background: rgba(4,7,12,.55);
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 11px;
+  margin-top: 10px;
+}
+
+.admin-status-toggle input {
+  width: auto;
+}
