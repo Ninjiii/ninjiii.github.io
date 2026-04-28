@@ -1,4 +1,4 @@
-# FIB Akten-System V2
+# FIB Akten-System V1
 
 React + Vite + Firebase Aktenverwaltung für GitHub Pages.
 
@@ -318,3 +318,22 @@ Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, dami
 - Fehler `selectedPersonId is not defined` behoben.
 - Der State wird jetzt explizit innerhalb der `Dashboard`-Funktion eingefügt.
 - ZIP wurde geprüft: State steht vor der Verwendung im Dashboard.
+
+
+## V20 Warrants System
+
+- neue Firestore Collection: `warrants`
+- Warrants werden im Personenprofil angezeigt.
+- Warrant erstellen:
+  - ARREST
+  - SEARCH
+  - SURVEILLANCE
+- Warrant Status:
+  - ACTIVE
+  - EXECUTED
+  - EXPIRED
+- Warrant kann optional mit einer Akte verbunden werden.
+- Status kann im Personenprofil geändert werden.
+- Firestore Rules wurden um `warrants` erweitert.
+
+Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
