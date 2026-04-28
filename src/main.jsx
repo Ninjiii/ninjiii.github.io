@@ -7,8 +7,7 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  signOut
-} from "firebase/auth";
+  signOut, updatePassword} from "firebase/auth";
 import {
   addDoc,
   collection,
@@ -119,6 +118,22 @@ function safeClassName(value) {
 
 
 
+
+function serviceNumber(uid = "") {
+  const seed = String(uid || Date.now()).replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase();
+  return `FIB-${seed || String(Date.now()).slice(-6)}`;
+}
+
+function badgeRecord(userRecord = {}) {
+  return {
+    serviceNumber: userRecord.serviceNumber || serviceNumber(userRecord.uid || userRecord.id),
+    division: userRecord.department || "Nicht zugewiesen",
+    callsign: userRecord.displayName || userRecord.email || "Unknown Agent",
+    clearance: userRecord.role === "Administrator" ? "COMMAND" : userRecord.role || "STANDARD",
+    status: userRecord.suspended ? "SUSPENDED" : "ACTIVE"
+  };
+}
+
 function caseNumber(type) {
   const prefix = {
     Fallakte: "FIB-FALL",
@@ -192,6 +207,8 @@ function useAuthProfile() {
           displayName: user.email?.split("@")[0],
           role: "Anwärter",
           department: "",
+          serviceNumber: serviceNumber(user.uid),
+          badgeIssuedAt: serverTimestamp(),
           suspended: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -1592,6 +1609,11 @@ function AdminPanel({ currentUser, profile, ranks }) {
     setStatus("Abteilung aktualisiert.");
   }
 
+  async function updateServiceNumber(userId, serviceNumberValue) {
+    await updateDoc(doc(db, "users", userId), { serviceNumber: serviceNumberValue, updatedAt: serverTimestamp() });
+    setStatus("Dienstnummer aktualisiert.");
+  }
+
   async function toggleSuspended(user) {
     if (user.uid === currentUser.uid) {
       setStatus("Du kannst deinen eigenen Account nicht sperren.");
@@ -1623,6 +1645,8 @@ function AdminPanel({ currentUser, profile, ranks }) {
         displayName: newUser.displayName || newUser.email.split("@")[0],
         role: newUser.role,
         department: newUser.department || "",
+        serviceNumber: serviceNumber(cred.user.uid),
+        badgeIssuedAt: serverTimestamp(),
         suspended: false,
         createdBy: currentUser.uid,
         createdAt: serverTimestamp(),
@@ -2189,6 +2213,82 @@ function CommandPanel({ title, empty, children }) {
 }
 
 
+
+function OwnServicePanel({ currentUser, profile }) {
+  const [passwords, setPasswords] = useState({ newPassword: "", confirmPassword: "" });
+  const [status, setStatus] = useState("");
+  const badge = badgeRecord(profile);
+
+  async function changePassword(e) {
+    e.preventDefault();
+    setStatus("");
+
+    if (!passwords.newPassword || passwords.newPassword.length < 6) {
+      setStatus("Das neue Passwort muss mindestens 6 Zeichen haben.");
+      return;
+    }
+
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      setStatus("Die Passwörter stimmen nicht überein.");
+      return;
+    }
+
+    try {
+      await updatePassword(currentUser, passwords.newPassword);
+      setPasswords({ newPassword: "", confirmPassword: "" });
+      setStatus("Passwort erfolgreich geändert.");
+    } catch (error) {
+      setStatus(`Passwort konnte nicht geändert werden: ${error.message}`);
+    }
+  }
+
+  return (
+    <section className="service-file-panel">
+      <div className="service-file-header">
+        <div>
+          <span className="eyebrow">Personal Service File</span>
+          <h2>Meine Dienstakte</h2>
+          <p>Persönliche FIB-Dienstakte. Eigene Bearbeitung ist auf Passwortänderung beschränkt.</p>
+        </div>
+        <div className="service-status">{badge.status}</div>
+      </div>
+
+      <div className="service-file-grid">
+        <aside className="fib-badge-card">
+          <div className="badge-seal">FIB</div>
+          <strong>{badge.callsign}</strong>
+          <span>{badge.serviceNumber}</span>
+          <small>{badge.clearance}</small>
+        </aside>
+
+        <section className="module-card">
+          <h3>Dienstinformationen</h3>
+          <div className="case-field-grid">
+            <div><b>Dienstnummer</b><span>{badge.serviceNumber}</span></div>
+            <div><b>Name</b><span>{profile.displayName || currentUser.email}</span></div>
+            <div><b>E-Mail</b><span>{currentUser.email}</span></div>
+            <div><b>Rang</b><span>{profile.role || "-"}</span></div>
+            <div><b>Abteilung</b><span>{profile.department || "Nicht zugewiesen"}</span></div>
+            <div><b>Status</b><span>{badge.status}</span></div>
+          </div>
+        </section>
+
+        <section className="module-card">
+          <h3>Passwort ändern</h3>
+          {status && <div className={status.includes("erfolgreich") ? "notice" : "error"}>{status}</div>}
+          <form className="password-change-form" onSubmit={changePassword}>
+            <input type="password" value={passwords.newPassword} onChange={e => setPasswords({ ...passwords, newPassword: e.target.value })} placeholder="Neues Passwort" />
+            <input type="password" value={passwords.confirmPassword} onChange={e => setPasswords({ ...passwords, confirmPassword: e.target.value })} placeholder="Neues Passwort bestätigen" />
+            <button type="submit">Passwort speichern</button>
+          </form>
+          <p className="muted">Falls Firebase eine erneute Anmeldung verlangt, einmal ausloggen und neu einloggen.</p>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+
 function Dashboard({ user, profile }) {
   const ranks = useRanks();
   const [active, setActive] = useState("dashboard");
@@ -2272,6 +2372,8 @@ function Dashboard({ user, profile }) {
           <div className="user-pill">{profile.displayName || user.email}</div>
         </header>
 
+        {active === "dienstakte" && <OwnServicePanel currentUser={user} profile={profile} />}
+
         {active === "dashboard" && <CommandDashboard cases={cases} persons={persons} warrants={warrants} users={users} />}
 
         {active === "akten" && mayReadCases && (
@@ -2327,6 +2429,11 @@ function Dashboard({ user, profile }) {
 
         {active === "personal" && (
           <section className="admin-panel">
+        <div className="command-admin-summary">
+          <div><b>{users.length}</b><span>Beamte</span></div>
+          <div><b>{users.filter(u => !u.suspended).length}</b><span>Aktiv</span></div>
+          <div><b>{users.filter(u => u.suspended).length}</b><span>Gesperrt</span></div>
+        </div>
             <div className="admin-head">
               <div>
                 <span className="eyebrow">Intelligence</span>
@@ -2413,7 +2520,7 @@ function Dashboard({ user, profile }) {
           </section>
         )}
 
-        {!["dashboard", "akten", "admin", "personal"].includes(active) && (
+        {!["dashboard", "akten", "admin", "personal", "dienstakte"].includes(active) && (
           <section className="placeholder">
             <h2>{active}</h2>
             <p>Dieser Bereich ist als eigenes Großmodul vorbereitet und kann im nächsten Schritt ausgebaut werden.</p>

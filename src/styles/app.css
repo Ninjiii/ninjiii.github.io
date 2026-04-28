@@ -2111,3 +2111,133 @@ h1, h2, h3, p { margin-top: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* V25 Badge & Dienstakte */
+.service-file-panel {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(11,17,27,.88), rgba(7,11,18,.88));
+  border-radius: 6px;
+  padding: 18px;
+}
+
+.service-file-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+
+.service-file-header h2 {
+  text-transform: uppercase;
+  letter-spacing: .09em;
+}
+
+.service-status {
+  border: 1px solid rgba(123,212,154,.45);
+  color: #b9ffd0;
+  background: rgba(123,212,154,.09);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  font-weight: 900;
+}
+
+.service-file-grid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.fib-badge-card {
+  border: 1px solid rgba(199,164,91,.50);
+  background:
+    radial-gradient(circle at center, rgba(199,164,91,.15), transparent 58%),
+    linear-gradient(180deg, rgba(16,24,38,.92), rgba(4,7,12,.92));
+  border-radius: 6px;
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+  text-align: center;
+  align-self: start;
+  box-shadow: inset 0 0 30px rgba(199,164,91,.08);
+}
+
+.badge-seal {
+  width: 106px;
+  height: 106px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  display: grid;
+  place-items: center;
+  color: #f0d797;
+  font-size: 28px;
+  font-weight: 950;
+  letter-spacing: .12em;
+  background: rgba(199,164,91,.09);
+}
+
+.fib-badge-card strong {
+  color: #e6cb89;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+}
+
+.fib-badge-card span,
+.fib-badge-card small {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.password-change-form {
+  display: grid;
+  gap: 10px;
+}
+
+.command-admin-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.command-admin-summary div {
+  border: 1px solid var(--line);
+  background: rgba(4,7,12,.55);
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.command-admin-summary b {
+  display: block;
+  color: #e6cb89;
+  font-size: 26px;
+}
+
+.command-admin-summary span {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  font-size: 11px;
+}
+
+.admin-row {
+  grid-template-columns: minmax(160px, 1.1fr) minmax(150px, .8fr) minmax(130px, .7fr) minmax(140px, .75fr) minmax(170px, .85fr) minmax(90px, .4fr) minmax(105px, .45fr);
+}
+
+@media (max-width: 1000px) {
+  .service-file-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .command-admin-summary {
+    grid-template-columns: 1fr;
+  }
+}
