@@ -385,7 +385,7 @@ function DashboardHome({ cases }) {
   );
 }
 
-function CaseForm({ user, users, onCreate }) {
+function CaseForm({ user, users, onCreate, t, lang }) {
   const [form, setForm] = useState(emptyCase(user));
 
   function set(key, value) {
