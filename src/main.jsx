@@ -158,7 +158,6 @@ function emptyCase(user) {
     location: "",
     department: "Major Crimes Division",
     allowedDepartments: [],
-    departmentRestricted: false,
     description: "",
     objective: "",
     tagsInput: "",
@@ -242,35 +241,15 @@ function LoginScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  function restrictToOwnDepartment() {
-    if (!profile?.department) return;
-    setForm(current => ({
-      ...current,
-      allowedDepartments: [profile.department],
-      departmentRestricted: true
-    }));
-  }
-
-  function clearAllowedDepartments() {
-    setForm(current => ({
-      ...current,
-      allowedDepartments: [],
-      departmentRestricted: false
-    }));
-  }
-
   function toggleAllowedDepartment(department) {
     setForm(current => {
-      const currentList = Array.isArray(current.allowedDepartments) ? current.allowedDepartments : [];
+      const currentList = current.allowedDepartments || [];
       const exists = currentList.includes(department);
-      const nextList = exists
-        ? currentList.filter(item => item !== department)
-        : [...currentList, department];
-
       return {
         ...current,
-        allowedDepartments: nextList,
-        departmentRestricted: nextList.length > 0
+        allowedDepartments: exists
+          ? currentList.filter(item => item !== department)
+          : [...currentList, department]
       };
     });
   }
@@ -387,6 +366,9 @@ function DashboardHome({ cases }) {
 
 function CaseForm({ user, users, onCreate, t, lang }) {
   const [form, setForm] = useState(emptyCase(user));
+  const [error, setError] = useState("");
+  const creatorRecord = users.find(u => u.uid === user.uid) || {};
+  const creatorDepartment = creatorRecord.department || "";
 
   function set(key, value) {
     setForm(current => ({ ...current, [key]: value }));
@@ -410,6 +392,39 @@ function CaseForm({ user, users, onCreate, t, lang }) {
       supervisorUid: uid,
       supervisor: selected?.email || ""
     }));
+  }
+
+  function restrictToOwnDepartment() {
+    if (!creatorDepartment) return;
+    setForm(current => ({
+      ...current,
+      allowedDepartments: [creatorDepartment],
+      departmentRestricted: true
+    }));
+  }
+
+  function clearAllowedDepartments() {
+    setForm(current => ({
+      ...current,
+      allowedDepartments: [],
+      departmentRestricted: false
+    }));
+  }
+
+  function toggleAllowedDepartment(department) {
+    setForm(current => {
+      const currentList = Array.isArray(current.allowedDepartments) ? current.allowedDepartments : [];
+      const exists = currentList.includes(department);
+      const nextList = exists
+        ? currentList.filter(item => item !== department)
+        : [...currentList, department];
+
+      return {
+        ...current,
+        allowedDepartments: nextList,
+        departmentRestricted: nextList.length > 0
+      };
+    });
   }
 
   async function submit(e) {
@@ -493,8 +508,9 @@ function CaseForm({ user, users, onCreate, t, lang }) {
         <p className="muted">Leer lassen = keine Abteilungsbeschränkung. Wenn Abteilungen ausgewählt sind, sehen normale Nutzer nur Akten ihrer Abteilung.</p>
         <div className="department-quick-actions">
           <button type="button" className="ghost" onClick={clearAllowedDepartments}>Alle Abteilungen erlauben</button>
-          {profile?.department && <button type="button" className="ghost" onClick={restrictToOwnDepartment}>Nur meine Abteilung</button>}
+          {creatorDepartment && <button type="button" className="ghost" onClick={restrictToOwnDepartment}>Nur meine Abteilung</button>}
         </div>
+
         <div className="department-check-grid">
           {DEPARTMENTS.map(department => (
             <label key={department} className={(form.allowedDepartments || []).includes(department) ? "checked" : ""}>
@@ -507,9 +523,6 @@ function CaseForm({ user, users, onCreate, t, lang }) {
             </label>
           ))}
         </div>
-        <p className="muted">
-          Aktuell: {(form.allowedDepartments || []).length ? form.allowedDepartments.join(", ") : "Alle Abteilungen dürfen diese Akte sehen"}
-        </p>
       </section>
 
       <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder="Incident Narrative / Hintergrund" />
@@ -668,8 +681,8 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       description: coreDraft.description,
       objective: coreDraft.objective,
       tags: coreDraft.tagsInput.split(",").map(tag => tag.trim()).filter(Boolean),
-      allowedDepartments: coreDraft.allowedDepartments || [],
-      departmentRestricted: (coreDraft.allowedDepartments || []).length > 0
+      allowedDepartments: Array.isArray(coreDraft.allowedDepartments) ? coreDraft.allowedDepartments : [],
+      departmentRestricted: Array.isArray(coreDraft.allowedDepartments) && coreDraft.allowedDepartments.length > 0
     }, "Stammdaten der Akte bearbeitet");
 
     if (ok) setEditCore(false);

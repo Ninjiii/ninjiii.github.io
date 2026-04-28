@@ -1950,7 +1950,7 @@ h1, h2, h3, p { margin-top: 0; }
 }
 
 
-/* V23.1 Abteilungszugriff Fix */
+/* V23.3 Stable Full Package */
 .department-quick-actions {
   display: flex;
   gap: 8px;
