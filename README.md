@@ -421,3 +421,11 @@ Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
 - Neue Accounts bekommen automatisch eine Dienstnummer.
 
 Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen.
+
+
+## V25.1 Dienstakte Sidebar Fix
+
+- Sidebar-Eintrag `Meine Dienstakte` wird erzwungen.
+- Render-Block `active === "dienstakte"` wird erzwungen.
+- Fallback schließt `dienstakte` korrekt aus.
+- Dienstakte-Panel ist vorhanden.
