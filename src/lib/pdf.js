@@ -1,4 +1,3 @@
-
 import jsPDF from "jspdf";
 
 async function imageToDataUrl(url) {
@@ -27,66 +26,83 @@ function imageFormatFromDataUrl(dataUrl) {
 
 export async function exportCasePdf(caseFile) {
   const doc = new jsPDF();
-  const lineHeight = 8;
+  const pageBottom = 280;
+  const left = 14;
+  const labelX = 14;
+  const valueX = 58;
+  const fullWidth = 180;
+  const valueWidth = 136;
+  const lineHeight = 6;
   let y = 16;
-  }
 
-  function addWrappedText(label, value, width = 180) {
-    const text = value && String(value).trim() ? String(value) : "-";
-    if (label) {
-      ensureSpace(8);
-      doc.setFont(undefined, "bold");
-      doc.text(String(label), 14, y);
-      y += 6;
-      doc.setFont(undefined, "normal");
-    }
-
-    const lines = doc.splitTextToSize(text, width);
-    lines.forEach(line => {
-      ensureSpace(6);
-      doc.text(line, 14, y);
-      y += 6;
-    });
-    y += 3;
-  }
-
-
-  const ensureSpace = (needed = 20) => {
-    if (y + needed > 280) {
+  const ensureSpace = (needed = 12) => {
+    if (y + needed > pageBottom) {
       doc.addPage();
       y = 16;
     }
   };
 
+  const addTitle = () => {
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("FEDERAL INVESTIGATION BUREAU", left, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.text("Federal Case Jacket / Evidence Dossier", left, y);
+    y += 12;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+  };
+
   const addSection = (title) => {
-    ensureSpace(20);
+    ensureSpace(18);
     y += 4;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
-    doc.text(title, 14, y);
+    doc.text(String(title), left, y);
     y += 8;
     doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+  };
+
+  const addWrappedBlock = (text, x = left, width = fullWidth) => {
+    const value = text && String(text).trim() ? String(text) : "-";
+    const lines = doc.splitTextToSize(value, width);
+
+    for (const line of lines) {
+      ensureSpace(lineHeight);
+      doc.text(line, x, y);
+      y += lineHeight;
+    }
+
+    y += 2;
   };
 
   const addLine = (label, value = "") => {
-    ensureSpace(14);
+    const text = value && String(value).trim() ? String(value) : "-";
+    const lines = doc.splitTextToSize(text, valueWidth);
+
+    ensureSpace(Math.max(12, lines.length * lineHeight + 2));
     doc.setFont("helvetica", "bold");
-    doc.text(`${label}:`, 14, y);
+    doc.text(`${label}:`, labelX, y);
     doc.setFont("helvetica", "normal");
-    const text = doc.splitTextToSize(String(value || "-"), 128);
-    doc.text(text, 58, y);
-    y += Math.max(lineHeight, text.length * lineHeight);
+
+    for (const line of lines) {
+      ensureSpace(lineHeight);
+      doc.text(line, valueX, y);
+      y += lineHeight;
+    }
+
+    y += 2;
   };
 
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("FEDERAL INVESTIGATION BUREAU", 14, y);
-  y += 8;
-  doc.setFontSize(12);
-  doc.text("Federal Case Jacket / Evidence Dossier", 14, y);
-  y += 12;
+  const addLongField = (label, value) => {
+    addSection(label);
+    addWrappedBlock(value || "-", left, fullWidth);
+  };
 
-  doc.setFontSize(10);
+  addTitle();
+
   addLine("Case Number", caseFile.caseNo);
   addLine("Title", caseFile.title);
   addLine("Case Type", caseFile.type);
@@ -95,48 +111,47 @@ export async function exportCasePdf(caseFile) {
   addLine("Classification", caseFile.classification);
   addLine("Lead Agent", caseFile.leadAgent || caseFile.assignee);
   addLine("Supervising Officer", caseFile.supervisor);
-  addLine("Assigned Agents", (caseFile.assignedAgents || []).map(a => a.email).join(", "));
+  addLine("Assigned Agents", (caseFile.assignedAgents || []).map(a => a.email || a.displayName || a).join(", "));
   addLine("Location", caseFile.location);
   addLine("Division", caseFile.department);
+  addLine("Allowed Departments", (caseFile.allowedDepartments || []).join(", ") || "All");
   addLine("Tags", (caseFile.tags || []).join(", "));
 
-  addSection("Incident Narrative");
-  addLine("Description", caseFile.description);
-  addLine("Objective", caseFile.objective);
+  addLongField("Incident Narrative / Sachverhalt", caseFile.description);
+  addLongField("Objective / Zielsetzung", caseFile.objective);
 
   addSection("Subjects / Persons of Interest");
-  addLine("Records", (caseFile.suspects || []).map(p => `- ${p.name}: ${p.info}`).join("\\n"));
+  const subjects = [
+    ...(caseFile.suspects || []).map(p => `- ${p.name || "-"}: ${p.info || "-"}`),
+    ...(caseFile.personRefs || []).map(p => `- ${p.name || "-"} (${p.alias || "-"}) [${p.status || "-"} / ${p.riskLevel || "-"}]`)
+  ].join("\n");
+  addWrappedBlock(subjects || "No subjects recorded.");
 
   addSection("Evidence Registry");
   const evidenceList = caseFile.evidence || [];
 
   if (!evidenceList.length) {
-    addLine("Records", "No evidence records.");
+    addWrappedBlock("No evidence records.");
   }
 
   for (const evidence of evidenceList) {
-    ensureSpace(30);
+    ensureSpace(26);
     doc.setFont("helvetica", "bold");
-    doc.text(`${evidence.id || "NO-ID"} · ${evidence.name || "Evidence"}`, 14, y);
-    y += 7;
-
+    addWrappedBlock(`${evidence.id || "NO-ID"} · ${evidence.name || "Evidence"}`, left, fullWidth);
     doc.setFont("helvetica", "normal");
-    const details = [
+
+    addWrappedBlock([
       `Type: ${evidence.type || "-"}`,
       `Status: ${evidence.status || "SECURED"}`,
       `Source: ${evidence.source || "Unknown"}`,
       `Info: ${evidence.info || "-"}`
-    ].join("\\n");
-    const detailLines = doc.splitTextToSize(details, 180);
-    ensureSpace(detailLines.length * lineHeight + 12);
-    doc.text(detailLines, 18, y);
-    y += detailLines.length * lineHeight;
+    ].join("\n"), 18, 172);
 
     if (evidence.image?.url) {
       const dataUrl = await imageToDataUrl(evidence.image.url);
 
       if (dataUrl) {
-        ensureSpace(84);
+        ensureSpace(62);
         try {
           doc.addImage(dataUrl, imageFormatFromDataUrl(dataUrl), 18, y, 72, 54);
           y += 60;
@@ -149,31 +164,34 @@ export async function exportCasePdf(caseFile) {
       }
     }
 
-    const chain = (evidence.chain || []).map(c => `- ${c.date} ${c.by}: ${c.text}`).join("\\n");
-    if (chain) addLine("Chain", chain);
-    y += 4;
+    const chain = (evidence.chain || []).map(c => `- ${c.date || ""} ${c.by || ""}: ${c.text || ""}`).join("\n");
+    if (chain) {
+      addLine("Chain", chain);
+    }
+
+    y += 3;
   }
 
   addSection("Intelligence Relationships");
-  addLine("Records", (caseFile.relationships || []).map(r => `- ${r.fromName} -> ${r.toName} [${r.type}]: ${r.note || ""}`).join("\n"));
+  addWrappedBlock((caseFile.relationships || []).map(r => `- ${r.fromName || "-"} -> ${r.toName || "-"} [${r.type || "-"}]: ${r.note || ""}`).join("\n") || "No relationships recorded.");
 
   addSection("Internal Reports");
-  addLine("Records", (caseFile.reports || []).map(r => `- ${r.id} ${r.title} [${r.type}] by ${r.createdBy}\n${r.content}`).join("\n\n"));
+  addWrappedBlock((caseFile.reports || []).map(r => `- ${r.id || "-"} ${r.title || "-"} [${r.type || "-"}] by ${r.createdBy || "-"}\n${r.content || ""}`).join("\n\n") || "No reports recorded.");
 
   addSection("Linked Cases");
-  addLine("Records", (caseFile.linkedCases || []).map(l => `- ${l.ref} (${l.addedAt || ""} ${l.by || ""})`).join("\n"));
+  addWrappedBlock((caseFile.linkedCases || []).map(l => `- ${l.ref || "-"} (${l.addedAt || ""} ${l.by || ""})`).join("\n") || "No linked cases.");
 
   addSection("Investigation Milestones");
-  addLine("Records", (caseFile.milestones || []).map(m => `- ${m.date} ${m.status}: ${m.title} — ${m.note || ""}`).join("\n"));
+  addWrappedBlock((caseFile.milestones || []).map(m => `- ${m.date || ""} ${m.status || ""}: ${m.title || ""} — ${m.note || ""}`).join("\n") || "No milestones recorded.");
 
   addSection("Agent Notes");
-  addLine("Records", (caseFile.notes || []).map(n => `- ${n.date} ${n.by || ""}: ${n.text}`).join("\\n"));
+  addWrappedBlock((caseFile.notes || []).map(n => `- ${n.date || ""} ${n.by || ""}: ${n.text || ""}`).join("\n") || "No notes recorded.");
 
   addSection("Operations Log");
-  addLine("Records", (caseFile.logbook || []).map(l => `- ${l.date} ${l.by || ""}: ${l.text}`).join("\\n"));
+  addWrappedBlock((caseFile.logbook || []).map(l => `- ${l.date || ""} ${l.by || ""}: ${l.text || ""}`).join("\n") || "No operations log recorded.");
 
   addSection("Audit Trail");
-  addLine("Records", (caseFile.activity || []).map(a => `- ${a.date} ${a.by || ""}: ${a.text}`).join("\\n"));
+  addWrappedBlock((caseFile.activity || []).map(a => `- ${a.date || ""} ${a.by || ""}: ${a.text || ""}`).join("\n") || "No audit entries recorded.");
 
   doc.save(`${caseFile.caseNo || caseFile.title || "case-file"}.pdf`);
 }
