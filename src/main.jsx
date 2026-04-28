@@ -1649,7 +1649,7 @@ function AdminPanel({ currentUser, profile, ranks }) {
 }
 
 
-function PersonProfilePanel({ person, cases, warrants = [], profile, ranks, onClose }) {
+function PersonProfilePanel({ person, cases, warrants = [], profile, ranks, onClose, onDeleted }) {
   const [draft, setDraft] = useState(null);
   const [mugshotFile, setMugshotFile] = useState(null);
   const [status, setStatus] = useState("");
@@ -1681,6 +1681,7 @@ function PersonProfilePanel({ person, cases, warrants = [], profile, ranks, onCl
   if (!person || !draft) return null;
 
   const mayEdit = profile.role === "Administrator" || can(profile.role, "edit", ranks);
+  const isAdmin = profile.role === "Administrator";
   const linkedCases = cases.filter(caseFile =>
     (person.caseRefs || []).includes(caseFile.id) ||
     (person.caseNumbers || []).includes(caseFile.caseNo) ||
@@ -1763,6 +1764,58 @@ function PersonProfilePanel({ person, cases, warrants = [], profile, ranks, onCl
     setStatus(`Warrant Status geändert: ${nextStatus}`);
   }
 
+  async function deletePersonProfile() {
+    if (!isAdmin) return;
+
+    const confirmed = confirm(
+      `Person wirklich löschen?\n\n${person.name}\n\nDie Person wird aus der Personendatenbank gelöscht und aus verknüpften Akten entfernt. Warrants werden als EXPIRED markiert.`
+    );
+
+    if (!confirmed) return;
+
+    setStatus("Person wird gelöscht...");
+
+    const affectedCases = cases.filter(caseFile =>
+      (caseFile.personRefs || []).some(ref => ref.id === person.id) ||
+      (caseFile.relationships || []).some(rel => rel.fromPersonId === person.id || rel.toPersonId === person.id)
+    );
+
+    for (const caseFile of affectedCases) {
+      const nextPersonRefs = (caseFile.personRefs || []).filter(ref => ref.id !== person.id);
+      const nextRelationships = (caseFile.relationships || []).filter(rel => rel.fromPersonId !== person.id && rel.toPersonId !== person.id);
+
+      await updateDoc(doc(db, "cases", caseFile.id), {
+        personRefs: nextPersonRefs,
+        relationships: nextRelationships,
+        activity: [
+          ...(caseFile.activity || []),
+          {
+            text: `Person removed from case: ${person.name}`,
+            date: new Date().toLocaleString("de-DE"),
+            by: auth.currentUser?.email || "unknown"
+          }
+        ],
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    const activeWarrants = warrants.filter(warrant => warrant.personId === person.id);
+
+    for (const warrant of activeWarrants) {
+      await updateDoc(doc(db, "warrants", warrant.id), {
+        status: "EXPIRED",
+        archivedReason: "Person profile deleted",
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser?.email || "unknown"
+      });
+    }
+
+    await deleteDoc(doc(db, "persons", person.id));
+
+    if (onDeleted) onDeleted();
+    onClose();
+  }
+
   const activeFlags = Object.entries(draft.flags || {}).filter(([, value]) => value);
   const flagLabels = {
     armed: "Bewaffnet",
@@ -1779,7 +1832,10 @@ function PersonProfilePanel({ person, cases, warrants = [], profile, ranks, onCl
             <span className="eyebrow">Personenprofil</span>
             <h2>{person.name}</h2>
           </div>
-          <button className="ghost" onClick={onClose}>Schließen</button>
+          <div className="profile-header-actions">
+            {isAdmin && <button className="danger" onClick={deletePersonProfile}>Person löschen</button>}
+            <button className="ghost" onClick={onClose}>Schließen</button>
+          </div>
         </header>
 
         {status && <div className="notice">{status}</div>}
@@ -2080,6 +2136,7 @@ function Dashboard({ user, profile }) {
             profile={profile}
             ranks={ranks}
             onClose={() => setSelectedPersonId(null)}
+            onDeleted={() => setSelectedPersonId(null)}
           />
         )}
 

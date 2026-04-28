@@ -1874,3 +1874,12 @@ h1, h2, h3, p { margin-top: 0; }
   border-top: 1px solid var(--line);
   padding-top: 12px;
 }
+
+
+/* V21 Delete Persons */
+.profile-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
