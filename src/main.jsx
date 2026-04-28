@@ -2431,6 +2431,46 @@ function OwnServicePanel({ currentUser, profile }) {
 }
 
 
+
+function canSeeCaseFile(caseFile, user, profile, ranks) {
+  if (!user || !profile || !caseFile) return false;
+
+  const roleName = profile.role || "";
+  const role = (ranks || []).find(r => r.name === roleName);
+  const permissions = role?.permissions || {};
+
+  const isAdmin = roleName === "Administrator";
+  const isCommand = ["Director", "Deputy Director", "Assistant Director", "Supervisor", "Leitung"].includes(roleName);
+  const canViewAll = Boolean(permissions.viewAllCases || permissions.allCases || permissions.command || permissions.admin || permissions.viewAll);
+
+  if (isAdmin || isCommand || canViewAll) return true;
+
+  const allowedDepartments = Array.isArray(caseFile.allowedDepartments) ? caseFile.allowedDepartments : [];
+  const departmentAllowed = !allowedDepartments.length || allowedDepartments.includes(profile.department || "");
+
+  const assignedAgents = Array.isArray(caseFile.assignedAgents) ? caseFile.assignedAgents : [];
+  const assignedByArray = assignedAgents.some(agent =>
+    agent === user.email ||
+    agent === user.uid ||
+    agent?.email === user.email ||
+    agent?.uid === user.uid
+  );
+
+  const ownOrAssigned =
+    caseFile.createdBy === user.uid ||
+    caseFile.createdByEmail === user.email ||
+    caseFile.assigneeUid === user.uid ||
+    caseFile.assignee === user.email ||
+    assignedByArray;
+
+  // Wichtig: Wenn eine Akte explizit für die Abteilung freigegeben ist, darf die Abteilung sie sehen.
+  // Wenn keine Abteilung gesetzt ist, bleibt klassische eigene/zugewiesene Logik erhalten.
+  if (allowedDepartments.length > 0) return departmentAllowed;
+
+  return ownOrAssigned;
+}
+
+
 function Dashboard({ user, profile }) {
   const ranks = useRanks();
   const [active, setActive] = useState("dashboard");
@@ -2450,7 +2490,7 @@ function Dashboard({ user, profile }) {
 
   const mayReadCases = can(profile.role, "read", ranks);
   const mayCreateCases = can(profile.role, "create", ranks);
-  const mayViewAllCases = canSeeAllCases(profile.role);
+  const mayViewAllCases = profile.role === "Administrator" || ["Director", "Deputy Director", "Assistant Director", "Supervisor", "Leitung"].includes(profile.role) || can(profile.role, "viewAllCases", ranks) || can(profile.role, "command", ranks) || can(profile.role, "admin", ranks);
 
   useEffect(() => {
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
@@ -2478,12 +2518,7 @@ function Dashboard({ user, profile }) {
     return onSnapshot(q, snap => {
       const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setLastLiveSync(new Date());
-      setCases(mayViewAllCases ? loaded : loaded.filter(caseFile => {
-        const ownOrAssigned = isOwnOrAssignedCase(caseFile, user);
-        const allowedDepartments = caseFile.allowedDepartments || [];
-        const departmentAllowed = !allowedDepartments.length || allowedDepartments.includes(profile.department || "");
-        return ownOrAssigned && departmentAllowed;
-      }));
+      setCases(mayViewAllCases ? loaded : loaded.filter(caseFile => canSeeCaseFile(caseFile, user, profile, ranks)));
     });
   }, [mayViewAllCases, user]);
 
