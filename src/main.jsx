@@ -2106,7 +2106,7 @@ function CommandDashboard({ cases = [], persons = [], warrants = [], users = [] 
       <div className="stats">
         <StatCard icon={FolderKanban} label="Aktive Akten" value={activeCases.length} />
         <StatCard icon={Shield} label="Aktive Warrants" value={activeWarrants.length} />
-        <StatCard icon={AlertTriangle} label="Kritische Fälle" value={criticalCases.length} />
+        <StatCard icon={Shield} label="Kritische Fälle" value={criticalCases.length} />
         <StatCard icon={Users} label="Aktive Beamte" value={activeUsers.length} />
       </div>
 
