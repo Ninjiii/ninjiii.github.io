@@ -445,3 +445,10 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Fehler `cred is not defined` beim Account-Erstellen behoben.
 - Dienstnummer wird jetzt aus `result.user.uid` erzeugt.
 - `createUserWithEmailAndPassword` wird korrekt als `const result = await ...` gespeichert.
+
+
+## V25.7 Account Create Build Fix
+
+- Build-Fehler `const credential = const result = ...` behoben.
+- Account-Erstellung nutzt wieder sauber `credential`.
+- Dienstnummer wird mit `credential.user.uid` erzeugt.
