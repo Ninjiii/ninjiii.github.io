@@ -305,6 +305,7 @@ function LoginScreen() {
 function Sidebar({ profile, active, setActive }) {
   const nav = [
     ["dashboard", "Federal Command Center", LayoutDashboard],
+    ["dienstakte", "Meine Dienstakte", Shield],
     ["akten", "Case Records Division", FolderKanban],
     ["termine", "Termine", CalendarDays],
     ["dokumente", "Document Vault", FileText],
