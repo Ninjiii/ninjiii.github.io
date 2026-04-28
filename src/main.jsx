@@ -1731,14 +1731,14 @@ function AdminPanel({ currentUser, profile, ranks }) {
     const secondaryAuth = getAuth(secondaryApp);
 
     try {
-      const credential = await createUserWithEmailAndPassword(secondaryAuth, newUser.email, newUser.password);
+      const credential = const result = await createUserWithEmailAndPassword(secondaryAuth, newUser.email, newUser.password);
       await setDoc(doc(db, "users", credential.user.uid), {
         uid: credential.user.uid,
         email: newUser.email,
         displayName: newUser.displayName || newUser.email.split("@")[0],
         role: newUser.role,
         department: newUser.department || "",
-        serviceNumber: serviceNumber(cred.user.uid),
+        serviceNumber: serviceNumber(result.user.uid),
         badgeIssuedAt: serverTimestamp(),
         suspended: false,
         createdBy: currentUser.uid,
