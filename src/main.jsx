@@ -54,6 +54,17 @@ const PERSON_STATUSES = ["SUSPECT", "WITNESS", "VICTIM", "INFORMANT", "POI", "UN
 const RISK_LEVELS = ["LOW", "STANDARD", "ELEVATED", "HIGH", "CRITICAL"];
 const WARRANT_TYPES = ["ARREST", "SEARCH", "SURVEILLANCE"];
 const WARRANT_STATUSES = ["ACTIVE", "EXECUTED", "EXPIRED"];
+const DEPARTMENTS = [
+  "Direktion",
+  "Major Crimes Division",
+  "Criminal Investigation Division",
+  "Gang & Narcotics Division",
+  "Cyber Crime Division",
+  "Counter Terrorism Division",
+  "Internal Affairs",
+  "Forensics Division",
+  "Special Operations Division"
+];
 
 const SIMPLE_TRANSLATIONS = {
   overview: "Übersicht",
@@ -146,6 +157,7 @@ function emptyCase(user) {
     supervisorUid: "",
     location: "",
     department: "Major Crimes Division",
+    allowedDepartments: [],
     description: "",
     objective: "",
     tagsInput: "",
@@ -179,6 +191,7 @@ function useAuthProfile() {
           email: user.email,
           displayName: user.email?.split("@")[0],
           role: "Anwärter",
+          department: "",
           suspended: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -227,6 +240,19 @@ function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  function toggleAllowedDepartment(department) {
+    setForm(current => {
+      const currentList = current.allowedDepartments || [];
+      const exists = currentList.includes(department);
+      return {
+        ...current,
+        allowedDepartments: exists
+          ? currentList.filter(item => item !== department)
+          : [...currentList, department]
+      };
+    });
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -384,6 +410,8 @@ function CaseForm({ user, users, onCreate }) {
       assigneeUid: form.assigneeUid,
       location: form.location,
       department: form.department,
+      allowedDepartments: form.allowedDepartments || [],
+      departmentRestricted: (form.allowedDepartments || []).length > 0,
       description: form.description,
       objective: form.objective,
       tags: form.tagsInput.split(",").map(t => t.trim()).filter(Boolean),
@@ -438,6 +466,23 @@ function CaseForm({ user, users, onCreate }) {
         <input value={form.department} onChange={e => set("department", e.target.value)} placeholder="Abteilung" />
         <input value={form.tagsInput} onChange={e => set("tagsInput", e.target.value)} placeholder="Tags, kommasepariert" />
       </div>
+
+      <section className="mini-section department-access-box">
+        <h3>Abteilungszugriff</h3>
+        <p className="muted">Leer lassen = keine Abteilungsbeschränkung. Wenn Abteilungen ausgewählt sind, sehen normale Nutzer nur Akten ihrer Abteilung.</p>
+        <div className="department-check-grid">
+          {DEPARTMENTS.map(department => (
+            <label key={department}>
+              <input
+                type="checkbox"
+                checked={(form.allowedDepartments || []).includes(department)}
+                onChange={() => toggleAllowedDepartment(department)}
+              />
+              {department}
+            </label>
+          ))}
+        </div>
+      </section>
 
       <textarea value={form.description} onChange={e => set("description", e.target.value)} placeholder="Incident Narrative / Hintergrund" />
       <textarea value={form.objective} onChange={e => set("objective", e.target.value)} placeholder="Investigative Objective / Maßnahmenziel" />
@@ -530,7 +575,8 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       department: selected.department || "",
       description: selected.description || "",
       objective: selected.objective || "",
-      tagsInput: (selected.tags || []).join(", ")
+      tagsInput: (selected.tags || []).join(", "),
+      allowedDepartments: selected.allowedDepartments || []
     });
     setEditCore(false);
   }, [selected?.id]);
@@ -567,6 +613,19 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
     setCoreDraft(current => ({ ...current, [key]: value }));
   }
 
+  function toggleCoreAllowedDepartment(department) {
+    setCoreDraft(current => {
+      const currentList = current?.allowedDepartments || [];
+      const exists = currentList.includes(department);
+      return {
+        ...current,
+        allowedDepartments: exists
+          ? currentList.filter(item => item !== department)
+          : [...currentList, department]
+      };
+    });
+  }
+
   async function saveCoreFields() {
     if (!mayEdit || !coreDraft) return;
 
@@ -580,7 +639,9 @@ function CaseDetails({ selected, profile, ranks, users, persons = [], onClose, t
       department: coreDraft.department,
       description: coreDraft.description,
       objective: coreDraft.objective,
-      tags: coreDraft.tagsInput.split(",").map(tag => tag.trim()).filter(Boolean)
+      tags: coreDraft.tagsInput.split(",").map(tag => tag.trim()).filter(Boolean),
+      allowedDepartments: coreDraft.allowedDepartments || [],
+      departmentRestricted: (coreDraft.allowedDepartments || []).length > 0
     }, "Stammdaten der Akte bearbeitet");
 
     if (ok) setEditCore(false);
@@ -1462,7 +1523,7 @@ function AdminPanel({ currentUser, profile, ranks }) {
   const [users, setUsers] = useState([]);
   const [persons, setPersons] = useState([]);
   const [status, setStatus] = useState("");
-  const [newUser, setNewUser] = useState({ email: "", password: "", displayName: "", role: ranks[0]?.name || "Anwärter" });
+  const [newUser, setNewUser] = useState({ email: "", password: "", displayName: "", role: ranks[0]?.name || "Anwärter", department: "" });
   const [rankName, setRankName] = useState("");
   const [rankPermissions, setRankPermissions] = useState(["read"]);
 
@@ -1483,6 +1544,11 @@ function AdminPanel({ currentUser, profile, ranks }) {
   async function updateDisplayName(userId, displayName) {
     await updateDoc(doc(db, "users", userId), { displayName, suspended: false, updatedAt: serverTimestamp() });
     setStatus("Name aktualisiert.");
+  }
+
+  async function updateDepartment(userId, department) {
+    await updateDoc(doc(db, "users", userId), { department, suspended: false, updatedAt: serverTimestamp() });
+    setStatus("Abteilung aktualisiert.");
   }
 
   async function toggleSuspended(user) {
@@ -1515,6 +1581,7 @@ function AdminPanel({ currentUser, profile, ranks }) {
         email: newUser.email,
         displayName: newUser.displayName || newUser.email.split("@")[0],
         role: newUser.role,
+        department: newUser.department || "",
         suspended: false,
         createdBy: currentUser.uid,
         createdAt: serverTimestamp(),
@@ -1522,7 +1589,7 @@ function AdminPanel({ currentUser, profile, ranks }) {
       });
       await signOut(secondaryAuth);
       await deleteApp(secondaryApp);
-      setNewUser({ email: "", password: "", displayName: "", role: ranks[0]?.name || "Anwärter" });
+      setNewUser({ email: "", password: "", displayName: "", role: ranks[0]?.name || "Anwärter", department: "" });
       setStatus("Account erstellt.");
     } catch (error) {
       await deleteApp(secondaryApp);
@@ -1590,6 +1657,10 @@ function AdminPanel({ currentUser, profile, ranks }) {
             <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
               {ranks.filter(r => profile.role === "Administrator" || r.name !== "Administrator").map(r => <option key={r.name}>{r.name}</option>)}
             </select>
+            <select value={newUser.department || ""} onChange={e => setNewUser({ ...newUser, department: e.target.value })}>
+              <option value="">Keine Abteilung</option>
+              {DEPARTMENTS.map(department => <option key={department} value={department}>{department}</option>)}
+            </select>
           </div>
           <button>Account erstellen</button>
         </form>
@@ -1606,6 +1677,10 @@ function AdminPanel({ currentUser, profile, ranks }) {
               <input defaultValue={user.displayName || ""} onBlur={e => updateDisplayName(user.id, e.target.value)} />
               <select value={user.role || "Anwärter"} onChange={e => updateRole(user.id, e.target.value)} disabled={user.uid === currentUser.uid}>
                 {ranks.filter(r => profile.role === "Administrator" || r.name !== "Administrator").map(r => <option key={r.name}>{r.name}</option>)}
+              </select>
+              <select value={user.department || ""} onChange={e => updateDepartment(user.id, e.target.value)}>
+                <option value="">Keine Abteilung</option>
+                {DEPARTMENTS.map(department => <option key={department} value={department}>{department}</option>)}
               </select>
               <span className={user.suspended ? "status-bad" : "status-good"}>{user.suspended ? "Gesperrt" : "Aktiv"}</span>
               <button className={user.suspended ? "ghost" : "danger"} onClick={() => toggleSuspended(user)} disabled={user.uid === currentUser.uid}>
@@ -2009,7 +2084,12 @@ function Dashboard({ user, profile }) {
     const q = query(collection(db, "cases"), orderBy("createdAt", "desc"));
     return onSnapshot(q, snap => {
       const loaded = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setCases(mayViewAllCases ? loaded : loaded.filter(caseFile => isOwnOrAssignedCase(caseFile, user)));
+      setCases(mayViewAllCases ? loaded : loaded.filter(caseFile => {
+        const ownOrAssigned = isOwnOrAssignedCase(caseFile, user);
+        const allowedDepartments = caseFile.allowedDepartments || [];
+        const departmentAllowed = !allowedDepartments.length || allowedDepartments.includes(profile.department || "");
+        return ownOrAssigned && departmentAllowed;
+      }));
     });
   }, [mayViewAllCases, user]);
 

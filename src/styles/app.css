@@ -1913,3 +1913,38 @@ h1, h2, h3, p { margin-top: 0; }
 .search-item:hover {
   background: rgba(199,164,91,.1);
 }
+
+
+/* V23 Abteilungen-System */
+.department-access-box {
+  background: rgba(16,24,38,.55);
+}
+
+.department-check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+}
+
+.department-check-grid label {
+  border: 1px solid var(--line);
+  background: rgba(4,7,12,.55);
+  border-radius: 4px;
+  padding: 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.department-check-grid input {
+  width: auto;
+}
+
+/* six columns in admin rows after department addition */
+.admin-row {
+  grid-template-columns: minmax(180px, 1.2fr) minmax(170px, .9fr) minmax(140px, .75fr) minmax(180px, .9fr) minmax(90px, .45fr) minmax(105px, .45fr);
+}
