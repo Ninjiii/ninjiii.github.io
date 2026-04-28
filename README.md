@@ -461,3 +461,13 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Akteninhalt aktualisiert sich automatisch, wenn ein anderer Nutzer die Akte ändert.
 - Bei Browser-Fokus / Tab-Wechsel wird ein Refresh-Tick ausgelöst.
 - Datenlisten aktualisieren weiterhin per Firestore `onSnapshot`.
+
+
+## V27 UI Stability + PDF Fix
+
+- Lange Listen wachsen nicht mehr endlos.
+- Intelligence, NetworkPRO, Beweismittel, Personen, Aktivitäten und Suchergebnisse haben Scrollbereiche.
+- Karten begrenzen lange Texte optisch.
+- Modale/Fenster bleiben innerhalb der Bildschirmhöhe scrollbar.
+- PDF Export nutzt Zeilenumbruch und Seitenumbruch.
+- Lange Sachverhalte werden nicht mehr abgeschnitten.
