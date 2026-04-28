@@ -443,3 +443,9 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
   - Sperrstatus
 - Badge-Karte wird direkt in der Admin-Dienstakte angezeigt.
 - Eigene Dienstakte bleibt für Beamte weiterhin separat sichtbar.
+
+
+## V25.3 Command Admin Build Fix
+
+- Build-Fehler `Expected , or ) but found {` behoben.
+- AdminPanel rendert Admin-Dienstakte-Modal jetzt korrekt innerhalb eines React-Fragments.
