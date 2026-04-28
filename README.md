@@ -337,3 +337,16 @@ Hinweis: Personen müssen im Intelligence-Tab mit der Akte verknüpft sein, dami
 - Firestore Rules wurden um `warrants` erweitert.
 
 Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
+
+
+## V21 Personen löschen
+
+- Administratoren können Personen direkt im Personenprofil löschen.
+- Sicherheitsabfrage vor dem Löschen.
+- Die Person wird aus `persons` gelöscht.
+- Die Person wird aus `personRefs` aller betroffenen Akten entfernt.
+- Beziehungen mit dieser Person werden aus betroffenen Akten entfernt.
+- Warrants der Person werden nicht gelöscht, sondern auf `EXPIRED` gesetzt.
+- Firestore Rules erlauben `delete` für `persons` nur Administratoren.
+
+Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
