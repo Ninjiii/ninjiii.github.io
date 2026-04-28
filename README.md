@@ -392,3 +392,10 @@ Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
 - letzte Aktivitäten
 - neue Personenprofile
 - neue Akten
+
+
+## V24.1 Dashboard Icon Fix
+
+- Fehler `AlertTriangle is not defined` behoben.
+- Dashboard nutzt jetzt nur vorhandene Icons.
+- Kein manueller Import nötig.
