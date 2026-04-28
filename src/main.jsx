@@ -1681,7 +1681,8 @@ function AdminPanel({ currentUser, profile, ranks }) {
 
   useEffect(() => {
     const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
-    return onSnapshot(q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return onSnapshot(<>
+q, snap => setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
 
   async function updateRole(userId, role) {
@@ -1881,16 +1882,17 @@ function AdminPanel({ currentUser, profile, ranks }) {
       )}
     </section>
 
-        {selectedAdminUserId && (
-          <AdminServiceFilePanel
-            userRecord={users.find(u => u.id === selectedAdminUserId)}
-            ranks={ranks}
-            profile={profile}
-            onClose={() => setSelectedAdminUserId(null)}
-            onSave={() => setSelectedAdminUserId(null)}
-          />
-        )}
 
+      {selectedAdminUserId && (
+        <AdminServiceFilePanel
+          userRecord={users.find(u => u.id === selectedAdminUserId)}
+          ranks={ranks}
+          profile={profile}
+          onClose={() => setSelectedAdminUserId(null)}
+          onSave={() => setSelectedAdminUserId(null)}
+        />
+      )}
+    </>
   );
 }
 
