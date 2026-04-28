@@ -471,3 +471,11 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Modale/Fenster bleiben innerhalb der Bildschirmhöhe scrollbar.
 - PDF Export nutzt Zeilenumbruch und Seitenumbruch.
 - Lange Sachverhalte werden nicht mehr abgeschnitten.
+
+
+## V27.1 PDF Build Fix
+
+- Build-Fehler `Identifier ensureSpace has already been declared` behoben.
+- Doppelte `ensureSpace` Deklaration aus `src/lib/pdf.js` entfernt.
+- UI-Stability Fix bleibt erhalten.
+- PDF-Umbruch bleibt erhalten.
