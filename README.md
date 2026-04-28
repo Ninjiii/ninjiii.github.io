@@ -431,21 +431,10 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Dienstakte-Panel ist vorhanden.
 
 
-## V25.2 Command Admin Upgrade
+## V25.4 Command Admin Stable
 
-- Command Admin Beamtenliste hat Button `Dienstakte öffnen`.
-- Admin-Dienstakte öffnet als großes Modal.
-- Admin kann dort bearbeiten:
-  - Anzeigename / Callsign
-  - Dienstnummer
-  - Rang
-  - Abteilung
-  - Sperrstatus
-- Badge-Karte wird direkt in der Admin-Dienstakte angezeigt.
-- Eigene Dienstakte bleibt für Beamte weiterhin separat sichtbar.
-
-
-## V25.3 Command Admin Build Fix
-
-- Build-Fehler `Expected , or ) but found {` behoben.
-- AdminPanel rendert Admin-Dienstakte-Modal jetzt korrekt innerhalb eines React-Fragments.
+- Neu aus stabiler V25.1-Basis gebaut.
+- Build-Fehler aus V25.2/V25.3 entfernt.
+- Command Admin hat Button `Dienstakte öffnen`.
+- Admin-Dienstakte öffnet als Modal innerhalb des AdminPanels.
+- Admin kann Dienstnummer, Name, Rang, Abteilung und Sperrstatus bearbeiten.
