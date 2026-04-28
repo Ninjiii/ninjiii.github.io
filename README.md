@@ -452,3 +452,12 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Build-Fehler `const credential = const result = ...` behoben.
 - Account-Erstellung nutzt wieder sauber `credential`.
 - Dienstnummer wird mit `credential.user.uid` erzeugt.
+
+
+## V26 Live Sync PRO
+
+- Live-Sync Anzeige in der Topbar.
+- Geöffnete Akten bekommen einen eigenen Live-Sync Listener.
+- Akteninhalt aktualisiert sich automatisch, wenn ein anderer Nutzer die Akte ändert.
+- Bei Browser-Fokus / Tab-Wechsel wird ein Refresh-Tick ausgelöst.
+- Datenlisten aktualisieren weiterhin per Firestore `onSnapshot`.
