@@ -470,3 +470,17 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Keine kaputten Klammern mehr.
 - Sachverhalt / Objective / lange Listen laufen sauber über mehrere PDF-Seiten.
 - UI-Stability Fix bleibt enthalten.
+
+
+## V27.3 Case Visibility Fix
+
+- Fehler behoben, dass nur Administratoren Akten sehen.
+- Leitung / Command-Ränge sehen wieder alle Akten.
+- Normale Beamte sehen:
+  - eigene Akten
+  - ihnen zugewiesene Akten
+  - Akten, die für ihre Abteilung freigegeben wurden
+- Alte Akten ohne Abteilungsbeschränkung bleiben über eigene/zugewiesene Logik sichtbar.
+- Firestore Rules wurden angepasst, damit Abteilungszugriff serverseitig erlaubt ist.
+
+Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
