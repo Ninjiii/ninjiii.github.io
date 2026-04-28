@@ -52,6 +52,8 @@ const PRIORITIES = ["LOW", "STANDARD", "HIGH", "CRITICAL"];
 const CLASSIFICATIONS = ["UNCLASSIFIED", "CONFIDENTIAL", "SECRET", "TOP SECRET"];
 const PERSON_STATUSES = ["SUSPECT", "WITNESS", "VICTIM", "INFORMANT", "POI", "UNKNOWN"];
 const RISK_LEVELS = ["LOW", "STANDARD", "ELEVATED", "HIGH", "CRITICAL"];
+const WARRANT_TYPES = ["ARREST", "SEARCH", "SURVEILLANCE"];
+const WARRANT_STATUSES = ["ACTIVE", "EXECUTED", "EXPIRED"];
 
 const SIMPLE_TRANSLATIONS = {
   overview: "Übersicht",
@@ -1647,10 +1649,15 @@ function AdminPanel({ currentUser, profile, ranks }) {
 }
 
 
-function PersonProfilePanel({ person, cases, profile, ranks, onClose }) {
+function PersonProfilePanel({ person, cases, warrants = [], profile, ranks, onClose }) {
   const [draft, setDraft] = useState(null);
   const [mugshotFile, setMugshotFile] = useState(null);
   const [status, setStatus] = useState("");
+  const [warrantDraft, setWarrantDraft] = useState({
+    type: "ARREST",
+    reason: "",
+    caseId: ""
+  });
 
   useEffect(() => {
     if (!person) return;
@@ -1679,6 +1686,8 @@ function PersonProfilePanel({ person, cases, profile, ranks, onClose }) {
     (person.caseNumbers || []).includes(caseFile.caseNo) ||
     (caseFile.personRefs || []).some(ref => ref.id === person.id)
   );
+
+  const personWarrants = warrants.filter(warrant => warrant.personId === person.id);
 
   function setField(key, value) {
     setDraft(current => ({ ...current, [key]: value }));
@@ -1716,6 +1725,42 @@ function PersonProfilePanel({ person, cases, profile, ranks, onClose }) {
 
     setStatus("Profil gespeichert.");
     setMugshotFile(null);
+  }
+
+  async function createWarrant() {
+    if (!mayEdit || !warrantDraft.reason.trim()) return;
+
+    const linkedCase = cases.find(caseFile => caseFile.id === warrantDraft.caseId);
+
+    await addDoc(collection(db, "warrants"), {
+      personId: person.id,
+      personName: draft.name || person.name,
+      personAlias: draft.alias || person.alias || "",
+      caseId: linkedCase?.id || "",
+      caseNo: linkedCase?.caseNo || "",
+      caseTitle: linkedCase?.title || "",
+      type: warrantDraft.type,
+      status: "ACTIVE",
+      reason: warrantDraft.reason,
+      issuedBy: auth.currentUser?.email || "unknown",
+      issuedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    setWarrantDraft({ type: "ARREST", reason: "", caseId: "" });
+    setStatus("Warrant erstellt.");
+  }
+
+  async function updateWarrantStatus(warrantId, nextStatus) {
+    if (!mayEdit) return;
+
+    await updateDoc(doc(db, "warrants", warrantId), {
+      status: nextStatus,
+      updatedAt: serverTimestamp(),
+      updatedBy: auth.currentUser?.email || "unknown"
+    });
+
+    setStatus(`Warrant Status geändert: ${nextStatus}`);
   }
 
   const activeFlags = Object.entries(draft.flags || {}).filter(([, value]) => value);
@@ -1813,6 +1858,44 @@ function PersonProfilePanel({ person, cases, profile, ranks, onClose }) {
             </section>
 
             <section className="module-card">
+              <h3>Warrants</h3>
+              <div className="module-list">
+                {personWarrants.length ? personWarrants.map(warrant => (
+                  <article key={warrant.id} className={`record-card warrant-card warrant-${String(warrant.status || "").toLowerCase()}`}>
+                    <b>{warrant.type} WARRANT · {warrant.status}</b>
+                    <span>{warrant.caseNo || "NO CASE"} · Issued by {warrant.issuedBy || "-"}</span>
+                    <p>{warrant.reason}</p>
+                    {mayEdit && warrant.status === "ACTIVE" && (
+                      <div className="warrant-actions">
+                        <button type="button" onClick={() => updateWarrantStatus(warrant.id, "EXECUTED")}>Executed</button>
+                        <button type="button" className="danger" onClick={() => updateWarrantStatus(warrant.id, "EXPIRED")}>Expired</button>
+                      </div>
+                    )}
+                  </article>
+                )) : <p className="muted">Keine Warrants vorhanden.</p>}
+              </div>
+
+              {mayEdit && (
+                <div className="warrant-create">
+                  <h3>Warrant erstellen</h3>
+                  <div className="grid-2">
+                    <select value={warrantDraft.type} onChange={e => setWarrantDraft({ ...warrantDraft, type: e.target.value })}>
+                      {WARRANT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                    <select value={warrantDraft.caseId} onChange={e => setWarrantDraft({ ...warrantDraft, caseId: e.target.value })}>
+                      <option value="">Keine Akte zuweisen</option>
+                      {linkedCases.map(caseFile => (
+                        <option key={caseFile.id} value={caseFile.id}>{caseFile.caseNo || caseFile.id} · {caseFile.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <textarea value={warrantDraft.reason} onChange={e => setWarrantDraft({ ...warrantDraft, reason: e.target.value })} placeholder="Grund / richterliche Begründung / Einsatzgrund" />
+                  <button type="button" onClick={createWarrant}>Warrant erstellen</button>
+                </div>
+              )}
+            </section>
+
+            <section className="module-card">
               <h3>Beziehungen</h3>
               <div className="module-list">
                 {(person.relationships || []).length ? person.relationships.map((rel, index) => (
@@ -1839,6 +1922,7 @@ function Dashboard({ user, profile }) {
   const [users, setUsers] = useState([]);
   const [persons, setPersons] = useState([]);
   const [selectedPersonId, setSelectedPersonId] = useState(null);
+  const [warrants, setWarrants] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("Alle");
@@ -1857,6 +1941,11 @@ function Dashboard({ user, profile }) {
   useEffect(() => {
     const q = query(collection(db, "persons"), orderBy("createdAt", "desc"));
     return onSnapshot(q, snap => setPersons(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, "warrants"), orderBy("issuedAt", "desc"));
+    return onSnapshot(q, snap => setWarrants(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
 
   useEffect(() => {
@@ -1987,6 +2076,7 @@ function Dashboard({ user, profile }) {
           <PersonProfilePanel
             person={persons.find(p => p.id === selectedPersonId)}
             cases={cases}
+            warrants={warrants}
             profile={profile}
             ranks={ranks}
             onClose={() => setSelectedPersonId(null)}

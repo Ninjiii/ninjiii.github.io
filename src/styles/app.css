@@ -1836,3 +1836,41 @@ h1, h2, h3, p { margin-top: 0; }
     height: 220px;
   }
 }
+
+
+/* V20 Warrants System */
+.warrant-card {
+  border-left: 3px solid rgba(239,195,109,.72);
+}
+
+.warrant-active {
+  border-color: rgba(239,195,109,.72);
+  background: rgba(239,195,109,.08);
+}
+
+.warrant-executed {
+  border-color: rgba(123,212,154,.62);
+  background: rgba(123,212,154,.08);
+}
+
+.warrant-expired {
+  border-color: rgba(216,92,104,.62);
+  background: rgba(216,92,104,.08);
+}
+
+.warrant-actions,
+.warrant-create {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.warrant-actions {
+  grid-template-columns: auto auto;
+  justify-content: start;
+}
+
+.warrant-create {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
