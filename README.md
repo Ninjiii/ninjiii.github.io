@@ -486,28 +486,12 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
 
 
-## V28.1 Document Vault UI Ausbau
+## V28.2 Vault Black Screen Fix
 
-- Document Vault ist jetzt sichtbar nutzbar.
-- Vault-Dokumente erstellen.
-- Klassifizierung:
-  - PUBLIC
-  - INTERNAL
-  - CONFIDENTIAL
-  - SECRET
-  - TOP SECRET
-- Dokumenttypen:
-  - CASE REPORT
-  - INTELLIGENCE REPORT
-  - EVIDENCE DOCUMENT
-  - INTERVIEW PROTOCOL
-  - SURVEILLANCE FILE
-  - WARRANT DOCUMENT
-  - OPERATION REPORT
-- Verknüpfung mit Akten und Personen.
-- Suche und Filter.
-- Detailansicht mit Metadaten.
-- Access Log beim Öffnen.
-- Firestore Rules für `vaultDocuments`.
+- Vault neu auf stabiler V27.3-Basis eingebaut.
+- Kein `queryFirestore` Alias mehr.
+- Such-State heißt `vaultSearchTerm`, damit kein Import-Konflikt entsteht.
+- Listener ist defensiv und crasht die App nicht bei fehlenden Rules.
+- Firestore Rules für `vaultDocuments` enthalten.
 
 Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
