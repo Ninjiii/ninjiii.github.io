@@ -2504,3 +2504,20 @@ h1, h2, h3, p { margin-top: 0; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* V28.4 Vault Delete Button */
+.vault-document-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+button.danger,
+.danger {
+  border-color: rgba(216,92,104,.55);
+  background: rgba(216,92,104,.14);
+  color: #ffc2c8;
+}

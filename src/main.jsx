@@ -2510,6 +2510,7 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
 
   const selectedVaultDoc = vaultDocs.find(docItem => docItem.id === selectedVaultDocId) || null;
   const mayCreateVaultDoc = profile?.role === "Administrator" || can(profile?.role, "edit", ranks) || can(profile?.role, "create", ranks);
+  const mayDeleteVaultDoc = profile?.role === "Administrator" || profile?.role === "Director" || profile?.role === "Direktor";
   const maySeeSecretVaultDocs = profile?.role === "Administrator" || ["Director", "Deputy Director", "Assistant Director", "Supervisor", "Leitung"].includes(profile?.role);
 
   const visibleVaultDocs = vaultDocs.filter(docItem => {
@@ -2603,6 +2604,22 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
     }
   }
 
+  async function deleteVaultDocument() {
+    if (!selectedVaultDoc || !mayDeleteVaultDoc) return;
+
+    const confirmed = confirm(`Dokument wirklich löschen?\n\n${selectedVaultDoc.title}`);
+    if (!confirmed) return;
+
+    try {
+      await deleteDoc(doc(db, "vaultDocuments", selectedVaultDoc.id));
+      setSelectedVaultDocId(null);
+      setVaultStatus("Dokument gelöscht.");
+    } catch (error) {
+      console.error("Vault delete failed:", error);
+      setVaultStatus(`Dokument konnte nicht gelöscht werden: ${error.message}`);
+    }
+  }
+
   return (
     <section className="vault-pro-panel">
       <div className="vault-header">
@@ -2651,7 +2668,14 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
                   <span className="eyebrow">{selectedVaultDoc.classification}</span>
                   <h2>{selectedVaultDoc.title}</h2>
                 </div>
-                <span className="vault-type-pill">{selectedVaultDoc.type}</span>
+                <div className="vault-document-actions">
+                  <span className="vault-type-pill">{selectedVaultDoc.type}</span>
+                  {mayDeleteVaultDoc && (
+                    <button type="button" className="danger" onClick={deleteVaultDocument}>
+                      Dokument löschen
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="case-field-grid">
