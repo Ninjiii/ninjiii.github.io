@@ -497,15 +497,15 @@ Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
 Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
 
 
-## V28.3 Vault Security PRO
+## V28.4 Vault Delete Button
 
-Firestore Rules für `vaultDocuments` wurden stabilisiert.
+- Löschbutton in der Vault-Dokument-Detailansicht ergänzt.
+- Sichtbar nur für:
+  - Administrator
+  - Director
+  - Direktor
+- Sicherheitsabfrage vor dem Löschen.
+- Firestore Rules angepasst:
+  - Administrator / Director / Direktor dürfen Vault-Dokumente löschen.
 
-Vault-Zugriff:
-- eingeloggte Nutzer können PUBLIC / INTERNAL / CONFIDENTIAL lesen
-- Command / Leitung / Administrator können SECRET / TOP SECRET lesen
-- Command / Leitung / Administrator können Vault-Dokumente erstellen und bearbeiten
-- nur Administrator kann Vault-Dokumente löschen
-
-Wichtig:
-Nach Einbau unbedingt `firebase-firestore.rules` in Firebase veröffentlichen.
+Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
