@@ -484,3 +484,30 @@ Hinweis: Passwortänderung kann Firebase-seitig eine frische Anmeldung verlangen
 - Firestore Rules wurden angepasst, damit Abteilungszugriff serverseitig erlaubt ist.
 
 Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
+
+
+## V28.1 Document Vault UI Ausbau
+
+- Document Vault ist jetzt sichtbar nutzbar.
+- Vault-Dokumente erstellen.
+- Klassifizierung:
+  - PUBLIC
+  - INTERNAL
+  - CONFIDENTIAL
+  - SECRET
+  - TOP SECRET
+- Dokumenttypen:
+  - CASE REPORT
+  - INTELLIGENCE REPORT
+  - EVIDENCE DOCUMENT
+  - INTERVIEW PROTOCOL
+  - SURVEILLANCE FILE
+  - WARRANT DOCUMENT
+  - OPERATION REPORT
+- Verknüpfung mit Akten und Personen.
+- Suche und Filter.
+- Detailansicht mit Metadaten.
+- Access Log beim Öffnen.
+- Firestore Rules für `vaultDocuments`.
+
+Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
