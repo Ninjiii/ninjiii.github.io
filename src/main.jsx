@@ -15,7 +15,7 @@ import {
   getDoc,
   onSnapshot,
   orderBy,
-  query as queryFirestore,
+  query,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -53,18 +53,6 @@ const PERSON_STATUSES = ["SUSPECT", "WITNESS", "VICTIM", "INFORMANT", "POI", "UN
 const RISK_LEVELS = ["LOW", "STANDARD", "ELEVATED", "HIGH", "CRITICAL"];
 const WARRANT_TYPES = ["ARREST", "SEARCH", "SURVEILLANCE"];
 const WARRANT_STATUSES = ["ACTIVE", "EXECUTED", "EXPIRED"];
-
-const VAULT_CLASSIFICATIONS = ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "SECRET", "TOP SECRET"];
-const VAULT_DOCUMENT_TYPES = [
-  "CASE REPORT",
-  "INTELLIGENCE REPORT",
-  "EVIDENCE DOCUMENT",
-  "INTERVIEW PROTOCOL",
-  "SURVEILLANCE FILE",
-  "WARRANT DOCUMENT",
-  "OPERATION REPORT"
-];
-
 const DEPARTMENTS = [
   "Direktion",
   "Major Crimes Division",
@@ -119,6 +107,10 @@ const VALUE_LABELS_SIMPLE = {
   CLOSED: "ABGESCHLOSSEN",
   ARCHIVED: "ARCHIVIERT"
 };
+
+
+const VAULT_CLASSIFICATIONS = ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "SECRET", "TOP SECRET"];
+const VAULT_DOCUMENT_TYPES = ["CASE REPORT", "INTELLIGENCE REPORT", "EVIDENCE DOCUMENT", "INTERVIEW PROTOCOL", "SURVEILLANCE FILE", "WARRANT DOCUMENT", "OPERATION REPORT"];
 
 function labelValue(value, lang = "de") {
   return lang === "de" ? (VALUE_LABELS_SIMPLE[value] || value || "-") : (value || "-");
@@ -2485,13 +2477,13 @@ function canSeeCaseFile(caseFile, user, profile, ranks) {
 
 
 function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
-  const [documents, setDocuments] = useState([]);
-  const [selectedDocId, setSelectedDocId] = useState(null);
-  const [query, setQuery] = useState("");
-  const [filterType, setFilterType] = useState("");
-  const [filterClassification, setFilterClassification] = useState("");
-  const [status, setStatus] = useState("");
-  const [draft, setDraft] = useState({
+  const [vaultDocs, setVaultDocs] = useState([]);
+  const [selectedVaultDocId, setSelectedVaultDocId] = useState(null);
+  const [vaultSearchTerm, setVaultSearchTerm] = useState("");
+  const [vaultTypeFilter, setVaultTypeFilter] = useState("");
+  const [vaultClassFilter, setVaultClassFilter] = useState("");
+  const [vaultStatus, setVaultStatus] = useState("");
+  const [vaultDraft, setVaultDraft] = useState({
     title: "",
     type: "CASE REPORT",
     classification: "INTERNAL",
@@ -2501,69 +2493,77 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
     content: ""
   });
 
-  const selectedDocument = documents.find(doc => doc.id === selectedDocId) || null;
-  const mayCreate = profile.role === "Administrator" || can(profile.role, "edit", ranks) || can(profile.role, "create", ranks);
-  const maySeeSecret = profile.role === "Administrator" || ["Director", "Deputy Director", "Assistant Director", "Supervisor", "Leitung"].includes(profile.role);
-
   useEffect(() => {
-    const q = queryFirestore(collection(db, "vaultDocuments"), orderBy("createdAt", "desc"));
-    return onSnapshot(q, snap => {
-      setDocuments(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    try {
+      const vaultQuery = query(collection(db, "vaultDocuments"), orderBy("createdAt", "desc"));
+      return onSnapshot(vaultQuery, snap => {
+        setVaultDocs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }, error => {
+        console.warn("Vault listener failed:", error);
+        setVaultStatus("Vault konnte nicht geladen werden. Prüfe Firestore Rules.");
+      });
+    } catch (error) {
+      console.warn("Vault setup failed:", error);
+      setVaultStatus("Vault konnte nicht initialisiert werden.");
+    }
   }, []);
 
-  const visibleDocuments = documents.filter(doc => {
-    if (["SECRET", "TOP SECRET"].includes(doc.classification) && !maySeeSecret) return false;
+  const selectedVaultDoc = vaultDocs.find(docItem => docItem.id === selectedVaultDocId) || null;
+  const mayCreateVaultDoc = profile?.role === "Administrator" || can(profile?.role, "edit", ranks) || can(profile?.role, "create", ranks);
+  const maySeeSecretVaultDocs = profile?.role === "Administrator" || ["Director", "Deputy Director", "Assistant Director", "Supervisor", "Leitung"].includes(profile?.role);
 
-    const text = [
-      doc.title,
-      doc.type,
-      doc.classification,
-      doc.caseNo,
-      doc.personName,
-      doc.content,
-      ...(doc.tags || [])
+  const visibleVaultDocs = vaultDocs.filter(docItem => {
+    if (["SECRET", "TOP SECRET"].includes(docItem.classification) && !maySeeSecretVaultDocs) return false;
+
+    const haystack = [
+      docItem.title,
+      docItem.type,
+      docItem.classification,
+      docItem.caseNo,
+      docItem.personName,
+      docItem.content,
+      ...(docItem.tags || [])
     ].join(" ").toLowerCase();
 
-    const matchesQuery = !query.trim() || text.includes(query.toLowerCase());
-    const matchesType = !filterType || doc.type === filterType;
-    const matchesClassification = !filterClassification || doc.classification === filterClassification;
-
-    return matchesQuery && matchesType && matchesClassification;
+    return (
+      (!vaultSearchTerm.trim() || haystack.includes(vaultSearchTerm.toLowerCase())) &&
+      (!vaultTypeFilter || docItem.type === vaultTypeFilter) &&
+      (!vaultClassFilter || docItem.classification === vaultClassFilter)
+    );
   });
 
-  function setField(key, value) {
-    setDraft(current => ({ ...current, [key]: value }));
+  function setVaultField(key, value) {
+    setVaultDraft(current => ({ ...current, [key]: value }));
   }
 
   async function createVaultDocument(e) {
     e.preventDefault();
-    setStatus("");
+    setVaultStatus("");
 
-    if (!mayCreate) {
-      setStatus("Keine Berechtigung zum Erstellen von Dokumenten.");
+    if (!mayCreateVaultDoc) {
+      setVaultStatus("Keine Berechtigung zum Erstellen.");
       return;
     }
 
-    if (!draft.title.trim() || !draft.content.trim()) {
-      setStatus("Titel und Inhalt müssen ausgefüllt sein.");
+    if (!vaultDraft.title.trim() || !vaultDraft.content.trim()) {
+      setVaultStatus("Titel und Inhalt müssen ausgefüllt sein.");
       return;
     }
 
-    const linkedCase = cases.find(c => c.id === draft.caseId);
-    const linkedPerson = persons.find(p => p.id === draft.personId);
+    const linkedCase = cases.find(c => c.id === vaultDraft.caseId);
+    const linkedPerson = persons.find(p => p.id === vaultDraft.personId);
 
     await addDoc(collection(db, "vaultDocuments"), {
-      title: draft.title.trim(),
-      type: draft.type,
-      classification: draft.classification,
+      title: vaultDraft.title.trim(),
+      type: vaultDraft.type,
+      classification: vaultDraft.classification,
       caseId: linkedCase?.id || "",
       caseNo: linkedCase?.caseNo || "",
       caseTitle: linkedCase?.title || "",
       personId: linkedPerson?.id || "",
       personName: linkedPerson?.name || "",
-      tags: draft.tagsInput.split(",").map(tag => tag.trim()).filter(Boolean),
-      content: draft.content,
+      tags: vaultDraft.tagsInput.split(",").map(tag => tag.trim()).filter(Boolean),
+      content: vaultDraft.content,
       version: 1,
       createdBy: auth.currentUser?.email || "unknown",
       createdByUid: auth.currentUser?.uid || "",
@@ -2572,7 +2572,7 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
       accessLog: []
     });
 
-    setDraft({
+    setVaultDraft({
       title: "",
       type: "CASE REPORT",
       classification: "INTERNAL",
@@ -2581,11 +2581,11 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
       tagsInput: "",
       content: ""
     });
-    setStatus("Dokument im Vault gespeichert.");
+    setVaultStatus("Dokument gespeichert.");
   }
 
-  async function openDocument(docItem) {
-    setSelectedDocId(docItem.id);
+  async function openVaultDocument(docItem) {
+    setSelectedVaultDocId(docItem.id);
 
     try {
       await updateDoc(doc(db, "vaultDocuments", docItem.id), {
@@ -2599,7 +2599,7 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
         ]
       });
     } catch (error) {
-      console.warn("Could not update vault access log", error);
+      console.warn("Vault access log failed:", error);
     }
   }
 
@@ -2609,36 +2609,32 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
         <div>
           <span className="eyebrow">Document Vault</span>
           <h2>Federal Document Vault</h2>
-          <p>Zentrales Archiv für Berichte, Intelligence-Dateien, Protokolle und einsatzrelevante Dokumente.</p>
+          <p>Zentrales Archiv für Berichte, Intelligence-Dateien, Protokolle und Dokumente.</p>
         </div>
         <div className="vault-stats">
-          <div><b>{visibleDocuments.length}</b><span>sichtbar</span></div>
-          <div><b>{documents.length}</b><span>gesamt</span></div>
+          <div><b>{visibleVaultDocs.length}</b><span>sichtbar</span></div>
+          <div><b>{vaultDocs.length}</b><span>gesamt</span></div>
         </div>
       </div>
 
-      {status && <div className={status.includes("gespeichert") ? "notice" : "error"}>{status}</div>}
+      {vaultStatus && <div className={vaultStatus.includes("gespeichert") ? "notice" : "error"}>{vaultStatus}</div>}
 
       <div className="vault-layout">
         <aside className="vault-sidebar">
           <h3>Vault Filter</h3>
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Dokumente durchsuchen..." />
-          <select value={filterType} onChange={e => setFilterType(e.target.value)}>
+          <input value={vaultSearchTerm} onChange={e => setVaultSearchTerm(e.target.value)} placeholder="Dokumente durchsuchen..." />
+          <select value={vaultTypeFilter} onChange={e => setVaultTypeFilter(e.target.value)}>
             <option value="">Alle Dokumenttypen</option>
             {VAULT_DOCUMENT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
           </select>
-          <select value={filterClassification} onChange={e => setFilterClassification(e.target.value)}>
+          <select value={vaultClassFilter} onChange={e => setVaultClassFilter(e.target.value)}>
             <option value="">Alle Klassifizierungen</option>
             {VAULT_CLASSIFICATIONS.map(level => <option key={level} value={level}>{level}</option>)}
           </select>
 
           <div className="vault-document-list">
-            {visibleDocuments.length ? visibleDocuments.map(docItem => (
-              <article
-                key={docItem.id}
-                className={`vault-doc-card vault-${String(docItem.classification || "").toLowerCase().replaceAll(" ", "-")}`}
-                onClick={() => openDocument(docItem)}
-              >
+            {visibleVaultDocs.length ? visibleVaultDocs.map(docItem => (
+              <article key={docItem.id} className="vault-doc-card" onClick={() => openVaultDocument(docItem)}>
                 <b>{docItem.title}</b>
                 <span>{docItem.type} · {docItem.classification}</span>
                 <p>{docItem.caseNo || "NO CASE"} {docItem.personName ? `· ${docItem.personName}` : ""}</p>
@@ -2648,39 +2644,25 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
         </aside>
 
         <main className="vault-main">
-          {selectedDocument ? (
+          {selectedVaultDoc ? (
             <section className="vault-document-view">
               <div className="vault-document-head">
                 <div>
-                  <span className="eyebrow">{selectedDocument.classification}</span>
-                  <h2>{selectedDocument.title}</h2>
+                  <span className="eyebrow">{selectedVaultDoc.classification}</span>
+                  <h2>{selectedVaultDoc.title}</h2>
                 </div>
-                <span className="vault-type-pill">{selectedDocument.type}</span>
+                <span className="vault-type-pill">{selectedVaultDoc.type}</span>
               </div>
 
               <div className="case-field-grid">
-                <div><b>Fall</b><span>{selectedDocument.caseNo || "-"} {selectedDocument.caseTitle ? `· ${selectedDocument.caseTitle}` : ""}</span></div>
-                <div><b>Person</b><span>{selectedDocument.personName || "-"}</span></div>
-                <div><b>Version</b><span>v{selectedDocument.version || 1}</span></div>
-                <div><b>Erstellt von</b><span>{selectedDocument.createdBy || "-"}</span></div>
-                <div><b>Tags</b><span>{(selectedDocument.tags || []).join(", ") || "-"}</span></div>
+                <div><b>Fall</b><span>{selectedVaultDoc.caseNo || "-"} {selectedVaultDoc.caseTitle ? `· ${selectedVaultDoc.caseTitle}` : ""}</span></div>
+                <div><b>Person</b><span>{selectedVaultDoc.personName || "-"}</span></div>
+                <div><b>Version</b><span>v{selectedVaultDoc.version || 1}</span></div>
+                <div><b>Erstellt von</b><span>{selectedVaultDoc.createdBy || "-"}</span></div>
+                <div><b>Tags</b><span>{(selectedVaultDoc.tags || []).join(", ") || "-"}</span></div>
               </div>
 
-              <article className="vault-content">
-                {selectedDocument.content}
-              </article>
-
-              <section className="module-card">
-                <h3>Access Log</h3>
-                <div className="module-list compact-list">
-                  {(selectedDocument.accessLog || []).length ? selectedDocument.accessLog.slice().reverse().map((log, index) => (
-                    <article className="record-card" key={index}>
-                      <b>{log.action || "OPENED"}</b>
-                      <span>{log.at || "-"} · {log.by || "-"}</span>
-                    </article>
-                  )) : <p className="muted">Noch keine Zugriffe protokolliert.</p>}
-                </div>
-              </section>
+              <article className="vault-content">{selectedVaultDoc.content}</article>
             </section>
           ) : (
             <section className="vault-empty-state">
@@ -2689,28 +2671,28 @@ function DocumentVaultPanel({ cases = [], persons = [], profile, ranks }) {
             </section>
           )}
 
-          {mayCreate && (
+          {mayCreateVaultDoc && (
             <form className="vault-create-form" onSubmit={createVaultDocument}>
               <h3>Neues Vault-Dokument erstellen</h3>
               <div className="grid-2">
-                <input value={draft.title} onChange={e => setField("title", e.target.value)} placeholder="Dokumenttitel" />
-                <select value={draft.type} onChange={e => setField("type", e.target.value)}>
+                <input value={vaultDraft.title} onChange={e => setVaultField("title", e.target.value)} placeholder="Dokumenttitel" />
+                <select value={vaultDraft.type} onChange={e => setVaultField("type", e.target.value)}>
                   {VAULT_DOCUMENT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                 </select>
-                <select value={draft.classification} onChange={e => setField("classification", e.target.value)}>
+                <select value={vaultDraft.classification} onChange={e => setVaultField("classification", e.target.value)}>
                   {VAULT_CLASSIFICATIONS.map(level => <option key={level} value={level}>{level}</option>)}
                 </select>
-                <input value={draft.tagsInput} onChange={e => setField("tagsInput", e.target.value)} placeholder="Tags, kommasepariert" />
-                <select value={draft.caseId} onChange={e => setField("caseId", e.target.value)}>
+                <input value={vaultDraft.tagsInput} onChange={e => setVaultField("tagsInput", e.target.value)} placeholder="Tags, kommasepariert" />
+                <select value={vaultDraft.caseId} onChange={e => setVaultField("caseId", e.target.value)}>
                   <option value="">Keine Akte verknüpfen</option>
                   {cases.map(caseFile => <option key={caseFile.id} value={caseFile.id}>{caseFile.caseNo || caseFile.id} · {caseFile.title}</option>)}
                 </select>
-                <select value={draft.personId} onChange={e => setField("personId", e.target.value)}>
+                <select value={vaultDraft.personId} onChange={e => setVaultField("personId", e.target.value)}>
                   <option value="">Keine Person verknüpfen</option>
-                  {persons.map(person => <option key={person.id} value={person.id}>{person.name} {person.alias ? `(${person.alias})` : ""}</option>)}
+                  {persons.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}
                 </select>
               </div>
-              <textarea value={draft.content} onChange={e => setField("content", e.target.value)} placeholder="Dokumentinhalt / Bericht / Intelligence Notes" />
+              <textarea value={vaultDraft.content} onChange={e => setVaultField("content", e.target.value)} placeholder="Dokumentinhalt / Bericht / Intelligence Notes" />
               <button type="submit">Dokument speichern</button>
             </form>
           )}
