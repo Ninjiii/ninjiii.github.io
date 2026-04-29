@@ -495,3 +495,17 @@ Nach Einbau bitte `firebase-firestore.rules` neu veröffentlichen.
 - Firestore Rules für `vaultDocuments` enthalten.
 
 Nach Einbau `firebase-firestore.rules` neu veröffentlichen.
+
+
+## V28.3 Vault Security PRO
+
+Firestore Rules für `vaultDocuments` wurden stabilisiert.
+
+Vault-Zugriff:
+- eingeloggte Nutzer können PUBLIC / INTERNAL / CONFIDENTIAL lesen
+- Command / Leitung / Administrator können SECRET / TOP SECRET lesen
+- Command / Leitung / Administrator können Vault-Dokumente erstellen und bearbeiten
+- nur Administrator kann Vault-Dokumente löschen
+
+Wichtig:
+Nach Einbau unbedingt `firebase-firestore.rules` in Firebase veröffentlichen.
